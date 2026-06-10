@@ -308,6 +308,32 @@
   <!-- Info-box po kliknięciu węzła -->
   <div id="info-box">
     <strong id="info-tytul">—</strong>
+    <span id="info-tresc"></span>
+  </div>
+
+  <script>
+    let siec = null;
+    let aktualnyTryb = 'slowa';
+
+    function zmienTryb(tryb) {
+      aktualnyTryb = tryb;
+      document.querySelectorAll('.tryb-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-' + tryb).classList.add('active');
+      zaladujGraf();
+    }
+
+    async function zaladujGraf() {
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('loading').textContent = 'Szykuję dane...';
+      try {
+        const url = 'https://model-wp08.onrender.com/graf_wektorowy?tryb=' + aktualnyTryb;
+        const rsp = await fetch(url);
+        if (!rsp.ok) throw new Error("Błąd pobierania danych API");
+        const dane = await rsp.json();
+        document.getElementById('loading').style.display = 'none';
+
+        if (!dane || !dane.nodes || dane.nodes.length === 0) {
+          document.getElementById('podtytul').textContent = 'Brak danych do wyświetlenia.';
           return;
         }
 
