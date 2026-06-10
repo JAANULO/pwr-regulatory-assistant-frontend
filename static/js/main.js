@@ -448,7 +448,7 @@ const chatEl= document.getElementById('chat');
       infoDiv.innerHTML = '<div style="color:var(--accent);font-size:12px;padding:10px;">🔍 Przeszukiwanie dysku...</div>';
 
       try {
-        const res = await fetch('/zrodla');
+        const res = await fetch(`${API_BASE_URL}/zrodla`);
         const pliki = await res.json();
 
         let html = '<div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">📂 Zarządzanie Wiedzą</div>';
@@ -491,7 +491,7 @@ const chatEl= document.getElementById('chat');
 
         html += `
         <div style="margin-top:10px;padding-top:10px;">
-          <button class="btn-rozwin" style="border-color:var(--accent2);color:var(--accent2);display:block;width:100%;font-weight:700;" onclick="window.open('/graf_widok','_blank')">🌐 Otwórz mapę powiązań</button>
+          <button class="btn-rozwin" style="border-color:var(--accent2);color:var(--accent2);display:block;width:100%;font-weight:700;" onclick="window.open('graf.html','_blank')">🌐 Otwórz mapę powiązań</button>
         </div>`;
 
         infoDiv.innerHTML = html;
