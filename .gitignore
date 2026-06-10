@@ -1,0 +1,16 @@
+# Edytory i IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Środowisko
+.env
+.env.local
+
+# Zależności (na przyszłość)
+node_modules/
+
+# Pliki tymczasowe systemu operacyjnego
+Thumbs.db
