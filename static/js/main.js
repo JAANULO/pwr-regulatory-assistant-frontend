@@ -1,5 +1,5 @@
 const API_BASE_URL = 'https://model-wp08.onrender.com';
-const API_KEY = 'NWakMstiqX.A5tjmSHo2KPfB1IF1N3QP9pfuwJtQD15';
+const API_KEY = 'UQVr8PrXNa.HIDyRCbyIAN9dLSnpP0510XfHz3AsFPq';
 
 const chatEl= document.getElementById('chat');
     const inputEl = document.getElementById('input');
