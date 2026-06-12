@@ -110,6 +110,7 @@
     #chat {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 24px 0;
       scroll-behavior: smooth;
     }
@@ -160,6 +161,7 @@
       font-size: 14px;
       line-height: 1.6;
       color: var(--text);
+      word-break: break-word;
     }
 
     /* ── bot message ── */
@@ -451,6 +453,7 @@
       outline: none;
       transition: border-color 0.15s;
       line-height: 1.5;
+      overflow-x: hidden;
     }
 
     #input::placeholder {
