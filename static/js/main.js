@@ -17,11 +17,35 @@ const chatEl= document.getElementById('chat');
       const isLight = document.body.classList.contains('light-theme');
       localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark');
     }
+
+    // Obsługa widoczności dopasowania
+    const SIM_KEY = 'pwr_pokaz_dopasowanie';
+    function ladujUstawieniaDopasowania() {
+      if (localStorage.getItem(SIM_KEY) !== 'true') {
+        document.body.classList.add('hide-similarity');
+      }
+      aktualizujPrzyciskDopasowania();
+    }
+    function przelaczDopasowanie() {
+      document.body.classList.toggle('hide-similarity');
+      const ukryte = document.body.classList.contains('hide-similarity');
+      localStorage.setItem(SIM_KEY, !ukryte ? 'true' : 'false');
+      aktualizujPrzyciskDopasowania();
+    }
+    function aktualizujPrzyciskDopasowania() {
+      const checkbox = document.getElementById('btn-toggle-sim');
+      if (checkbox) {
+        const ukryte = document.body.classList.contains('hide-similarity');
+        checkbox.checked = !ukryte;
+      }
+    }
+
     // Zarządzanie bazami zrodlowymi
     let aktywneZrodla = new Set(['Wszystkie dokumenty']);
     let wybraneZrodloIndywidualne = null;
 
     ladujMotyw();
+    ladujUstawieniaDopasowania();
 
     // pamięć kontekstu – ostatni paragraf i pytanie
     let ostatniKontekstTytul = null;
@@ -52,7 +76,7 @@ const chatEl= document.getElementById('chat');
       });
       scrollDol();
     }
-    window.addEventListener('load', wczytajHistorie);
+    // window.addEventListener('load', wczytajHistorie); // Tymczasowo wyłączone
 
     // auto-resize textarea
     inputEl.addEventListener('input', () => {
@@ -488,11 +512,6 @@ const chatEl= document.getElementById('chat');
           </div>`;
         });
 
-
-        html += `
-        <div style="margin-top:10px;padding-top:10px;">
-          <button class="btn-rozwin" style="border-color:var(--accent2);color:var(--accent2);display:block;width:100%;font-weight:700;" onclick="window.open('graf.html','_blank')">🌐 Otwórz mapę powiązań</button>
-        </div>`;
 
         infoDiv.innerHTML = html;
       } catch (e) {

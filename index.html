@@ -17,10 +17,12 @@
 <body>
 
   <header>
+    <!-- Tymczasowo wyłączona historia
     <button onclick="toggleSidebar()" data-tooltip="Rozwiń Historię"
       style="background:none;border:none;color:var(--text);font-size:24px;cursor:pointer;margin-right:12px;padding:0;">
       ☰
     </button>
+    -->
     <img src="static/logo.png" class="logo" alt="PWr" onerror="this.outerHTML='<div class=\'logo\'>PWr</div>'" />
     <div class="header-text">
       <h1>Asystent Regulaminowy</h1>
@@ -47,9 +49,24 @@
 
       <button class="modal-btn" onclick="przelaczMotyw()">☀ / ☾ Zmień motyw jasny/ciemny</button>
       <button class="modal-btn" onclick="zapiszPdf()">📄 Zapisz rozmowę do PDF</button>
-      <!-- <button class="modal-btn" onclick="pokazBazeWiedzy()">📂 Zarządzaj Bazami i Zobacz Graf</button> -->
+      <div class="sb-toggle-row"
+        style="margin-top: 10px; margin-bottom: 10px; border: 1px solid var(--border); padding: 10px 16px; border-radius: 12px; background: var(--surface2);">
+        <div style="font-size:14px; color:var(--text); font-family: 'Syne', sans-serif;">📊 Pokaż wartości dopasowania
+        </div>
+        <label class="sb-toggle-sw">
+          <input type="checkbox" id="btn-toggle-sim" onchange="przelaczDopasowanie()">
+          <span class="sb-slider"></span>
+        </label>
+      </div>
+
+      <!-- <button class="modal-btn" onclick="pokazBazeWiedzy()">📂 Zarządzaj Bazami</button> -->
       <div id="infoBazaWidzy"
         style="display:none; margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn-rozwin"
+          style="border-color:var(--accent2);color:var(--accent2);display:block;width:100%;font-weight:700;"
+          onclick="window.open('graf.html','_blank')">🌐 Otwórz mapę powiązań</button>
       </div>
 
       <!-- <button class="modal-btn" onclick="window.open('lab.html','_blank')" style="margin-top: 10px;">🧪 Laboratorium AI</button> -->

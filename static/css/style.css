@@ -257,6 +257,10 @@
     }
 
     /* ── similarity bar ── */
+    body.hide-similarity .sim-row {
+      display: none !important;
+    }
+    
     .sim-row {
       display: flex;
       align-items: center;
