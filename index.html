@@ -28,11 +28,11 @@
       <h1>Asystent Regulaminowy</h1>
       <p>Politechnika Wrocławska · Projekt: JAANULO</p>
     </div>
-    <button id="btn-clear" onclick="wyczyscChat()" data-tooltip="Nowy Czat"
+    <button id="btn-clear" data-tooltip="Nowy Czat"
       style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;transition:all 0.15s;">
       ✕ <span>nowy czat</span>
     </button>
-    <button id="btn-options" onclick="otworzOpcje()" data-tooltip="Opcje i ustawienia"
+    <button id="btn-options" data-tooltip="Opcje i ustawienia"
       style="margin-left:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.15s;">
       ⚙ <span>opcje</span>
     </button>
@@ -40,21 +40,21 @@
   </header>
 
   <!-- Okno Modalne z opcjami -->
-  <div class="modal-overlay" id="opcjeModal" onclick="zamknijOpcje(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
+  <div class="modal-overlay" id="opcjeModal">
+    <div class="modal-content" id="modalContent">
       <div class="modal-header">
         <span class="modal-title">Opcje systemu</span>
-        <button class="btn-close" onclick="zamknijOpcje()">✕</button>
+        <button class="btn-close" id="btnCloseOpcje">✕</button>
       </div>
 
-      <button class="modal-btn" onclick="przelaczMotyw()">☀ / ☾ Zmień motyw jasny/ciemny</button>
-      <button class="modal-btn" onclick="zapiszPdf()">📄 Zapisz rozmowę do PDF</button>
+      <button class="modal-btn" id="btnTheme">☀ / ☾ Zmień motyw jasny/ciemny</button>
+      <button class="modal-btn" id="btnPdf">📄 Zapisz rozmowę do PDF</button>
       <div class="sb-toggle-row"
         style="margin-top: 10px; margin-bottom: 10px; border: 1px solid var(--border); padding: 10px 16px; border-radius: 12px; background: var(--surface2);">
         <div style="font-size:14px; color:var(--text); font-family: 'Syne', sans-serif;">📊 Pokaż wartości dopasowania
         </div>
         <label class="sb-toggle-sw">
-          <input type="checkbox" id="btn-toggle-sim" onchange="przelaczDopasowanie()">
+          <input type="checkbox" id="btn-toggle-sim">
           <span class="sb-slider"></span>
         </label>
       </div>
@@ -64,9 +64,8 @@
         style="display:none; margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
       </div>
       <div style="margin-top:10px;">
-        <button class="btn-rozwin"
-          style="border-color:var(--accent2);color:var(--accent2);display:block;width:100%;font-weight:700;"
-          onclick="window.open('graf.html','_blank')">🌐 Otwórz mapę powiązań</button>
+        <button class="btn-rozwin" id="btnGraf"
+          style="border-color:var(--accent2);color:var(--accent2);display:block;width:100%;font-weight:700;">🌐 Otwórz mapę powiązań</button>
       </div>
 
       <!-- <button class="modal-btn" onclick="window.open('lab.html','_blank')" style="margin-top: 10px;">🧪 Laboratorium AI</button> -->
@@ -83,23 +82,23 @@
   <div id="sidebar" class="sidebar">
     <div class="sidebar-header">
       <h3>Historia zapytań</h3>
-      <button onclick="toggleSidebar()">✕</button>
+      <button id="btnCloseSidebar">✕</button>
     </div>
     <div id="sidebar-content"></div>
   </div>
 
   <div id="chat">
-    <button id="btn-scroll-down" onclick="scrollDol()">↓</button>
+    <button id="btn-scroll-down">↓</button>
     <div class="welcome" id="welcome">
       <div class="big">Zapytaj o <span>regulamin</span></div>
 
       <p>Przeszukuję regulamin studiów PWr i zwracam właściwy paragraf wraz ze źródłem.</p>
-      <div class="chips">
-        <div class="chip" onclick="zadaj(this)">ile razy można podejść do egzaminu?</div>
-        <div class="chip" onclick="zadaj(this)">kiedy można wziąć urlop dziekański?</div>
-        <div class="chip" onclick="zadaj(this)">co grozi za nieobecności?</div>
-        <div class="chip" onclick="zadaj(this)">jak wznowić studia po skreśleniu?</div>
-        <div class="chip" onclick="zadaj(this)">jak oblicza się średnią ocen?</div>
+      <div class="chips" id="welcome-chips">
+        <div class="chip">ile razy można podejść do egzaminu?</div>
+        <div class="chip">kiedy można wziąć urlop dziekański?</div>
+        <div class="chip">co grozi za nieobecności?</div>
+        <div class="chip">jak wznowić studia po skreśleniu?</div>
+        <div class="chip">jak oblicza się średnią ocen?</div>
       </div>
     </div>
   </div>
@@ -108,7 +107,7 @@
     <div class="input-row">
       <textarea id="input" aria-label="Pole pytania do asystenta" placeholder="Zadaj pytanie o regulamin studiów…"
         rows="1"></textarea>
-      <button id="btn" onclick="wyslij()">
+      <button id="btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"
           stroke-linejoin="round">
           <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -119,7 +118,7 @@
     <div class="hint" id="hint">Enter – wyślij &nbsp;·&nbsp; Shift+Enter – nowa linia</div>
   </footer>
 
-  <script src="static/js/main.js"></script>
+  <script type="module" src="static/js/main.js"></script>
 
 </body>
 

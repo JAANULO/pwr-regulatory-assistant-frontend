@@ -1,650 +1,498 @@
-const API_BASE_URL = 'https://model-wp08.onrender.com';
-const API_KEY = 'UQVr8PrXNa.HIDyRCbyIAN9dLSnpP0510XfHz3AsFPq';
+import { wyslijZapytanie, pobierzHistorieZBackendu, wyslijFeedbackNaBackend } from './api.js';
 
-const chatEl= document.getElementById('chat');
-    const inputEl = document.getElementById('input');
-    const btnEl = document.getElementById('btn');
+import {
+  ladujMotyw,
+  zapiszMotyw,
+  ladujUstawieniaDopasowania,
+  zapiszUstawieniaDopasowania,
+  zapiszHistorieLokalnie,
+  wyczyscHistorieLokalna,
+} from './storage.js';
 
-    // Obsługa motywu jasny/ciemny
-    const THEME_KEY = 'pwr_chat_theme';
-    function ladujMotyw() {
-      if (localStorage.getItem(THEME_KEY) === 'light') {
-        document.body.classList.add('light-theme');
+import {
+  escHtml,
+  scrollDol,
+  pokazTyping,
+  ukryjTyping,
+  dodajWiadomoscUzytkownika,
+  renderujOdpowiedz,
+  renderujKomunikatBledu,
+} from './ui.js';
+
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+const btnEl = document.getElementById('btn');
+
+let wybraneZrodloIndywidualne = null;
+
+let ostatniKontekstTytul = null;
+let ostatniKontekstPytanie = null;
+
+// INICJALIZACJA
+ladujMotyw();
+ladujUstawieniaDopasowania();
+
+// EVENT LISTENERS DO PRZYCISKÓW (zastępują onclick z HTML)
+document.getElementById('btn-clear')?.addEventListener('click', wyczyscChat);
+document.getElementById('btn-options')?.addEventListener('click', otworzOpcje);
+document.getElementById('btnCloseOpcje')?.addEventListener('click', zamknijOpcje);
+document.getElementById('btnTheme')?.addEventListener('click', przelaczMotyw);
+document.getElementById('btnPdf')?.addEventListener('click', zapiszPdf);
+document.getElementById('btn-toggle-sim')?.addEventListener('change', przelaczDopasowanie);
+document
+  .getElementById('btnGraf')
+  ?.addEventListener('click', () => window.open('graf.html', '_blank'));
+document.getElementById('btnCloseSidebar')?.addEventListener('click', toggleSidebar);
+document.getElementById('btn-scroll-down')?.addEventListener('click', () => scrollDol(chatEl));
+document.getElementById('btn')?.addEventListener('click', wyslij);
+
+// Zamykanie modala po kliknięciu w tło
+document.getElementById('opcjeModal')?.addEventListener('click', (event) => {
+  if (event.target === document.getElementById('opcjeModal')) zamknijOpcje();
+});
+document
+  .getElementById('modalContent')
+  ?.addEventListener('click', (event) => event.stopPropagation());
+
+// Delegacja zdarzeń dla "chips" (np. proste pytania)
+document.getElementById('welcome-chips')?.addEventListener('click', (e) => {
+  if (e.target.classList.contains('chip')) {
+    zadaj(e.target);
+  }
+});
+
+// Auto-resize textarea
+inputEl?.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  const len = inputEl.value.length;
+  const hint = document.getElementById('hint');
+  if (len > 200) {
+    hint.textContent = `⚠ Za długie pytanie (${len}/200)`;
+    hint.style.color = 'var(--danger)';
+  } else {
+    hint.textContent = 'Enter – wyślij · Shift+Enter – nowa linia';
+    hint.style.color = '';
+  }
+});
+
+// Enter wysyła, Shift+Enter nowa linia
+inputEl?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    wyslij();
+  }
+});
+
+function zadaj(chip) {
+  inputEl.value = chip.textContent;
+  wyslij();
+}
+
+function wyczyscChat() {
+  wyczyscHistorieLokalna();
+  ostatniKontekstTytul = null;
+  ostatniKontekstPytanie = null;
+  chatEl.innerHTML = `<div class="welcome" id="welcome">
+      <div class="big">Zapytaj o <span>regulamin</span></div>
+      <p>Przeszukuję regulamin studiów PWr i zwracam właściwy paragraf wraz ze źródłem.</p>
+      <div class="chips" id="welcome-chips">
+        <div class="chip">ile razy można podejść do egzaminu?</div>
+        <div class="chip">kiedy można wziąć urlop dziekański?</div>
+        <div class="chip">co grozi za nieobecności?</div>
+        <div class="chip">jak wznowić studia po skreśleniu?</div>
+        <div class="chip">jak oblicza się średnią ocen?</div>
+      </div></div>`;
+  // Po re-renderze HTML musimy od nowa przypisać eventy dla nowych chipów
+  document.getElementById('welcome-chips')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('chip')) {
+      zadaj(e.target);
+    }
+  });
+}
+
+function otworzOpcje() {
+  document.getElementById('opcjeModal')?.classList.add('active');
+}
+
+function zamknijOpcje() {
+  document.getElementById('opcjeModal')?.classList.remove('active');
+  const infoDiv = document.getElementById('infoBazaWidzy');
+  if (infoDiv) infoDiv.style.display = 'none';
+}
+
+function przelaczMotyw() {
+  document.body.classList.toggle('light-theme');
+  zapiszMotyw(document.body.classList.contains('light-theme'));
+}
+
+function przelaczDopasowanie() {
+  document.body.classList.toggle('hide-similarity');
+  const ukryte = document.body.classList.contains('hide-similarity');
+  zapiszUstawieniaDopasowania(!ukryte);
+  const checkbox = document.getElementById('btn-toggle-sim');
+  if (checkbox) checkbox.checked = !ukryte;
+}
+
+function zapiszPdf() {
+  zamknijOpcje();
+  const element = document.getElementById('chat');
+  const kolorTla = document.body.classList.contains('light-theme') ? '#f5f5f7' : '#0d0d0f';
+  const opt = {
+    margin: [10, 5, 10, 5],
+    filename: 'rozmowa_regulamin_pwr.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: kolorTla },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  };
+  html2pdf().set(opt).from(element).save();
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('open');
+  if (sidebar.classList.contains('open')) {
+    zaladujHistorie();
+  }
+}
+
+async function zaladujHistorie() {
+  const content = document.getElementById('sidebar-content');
+  content.innerHTML =
+    '<p style="padding:16px;color:var(--muted);font-size:12px;">Ładowanie historii...</p>';
+  try {
+    const dane = await pobierzHistorieZBackendu();
+    if (dane.error) {
+      content.innerHTML =
+        '<p style="padding:16px;color:var(--danger);font-size:12px;">Błąd bazy: ' +
+        escHtml(dane.error) +
+        '</p>';
+      return;
+    }
+    if (!Array.isArray(dane) || dane.length === 0) {
+      content.innerHTML =
+        '<p style="padding:16px;color:var(--muted);font-size:12px;">Brak wpisów w bazie.</p>';
+      return;
+    }
+    content.innerHTML = dane
+      .map((d) => {
+        const escapedValue = escHtml(d.pytanie).replace(/'/g, "\\'");
+        return (
+          '<div class="sidebar-item" data-pytanie="' +
+          escapedValue +
+          '">' +
+          escHtml(d.pytanie) +
+          '</div>'
+        );
+      })
+      .join('');
+
+    // Delegacja eventów dla sidebar-item
+    content.querySelectorAll('.sidebar-item').forEach((el) => {
+      el.addEventListener('click', () => wybierzZHistorii(el.dataset.pytanie));
+    });
+  } catch (err) {
+    content.innerHTML =
+      '<p style="padding:16px;color:var(--danger);font-size:12px;">Błąd pobierania historii.</p>';
+  }
+}
+
+function wybierzZHistorii(pytanie) {
+  toggleSidebar();
+  inputEl.value = pytanie;
+  wyslij();
+}
+
+// Globalnie dostępna funkcja wyslijFeedback dla onclicków
+window.wyslijFeedback = async function (btn) {
+  const pid = btn.dataset.pid;
+  const ocena = parseInt(btn.dataset.ocena);
+  if (!pid) return;
+  btn.closest('.feedback-row').innerHTML =
+    ocena === 1
+      ? '<span style="color:var(--accent)">Dzięki! ✓</span>'
+      : '<span style="color:var(--muted)">Zapisano, poprawimy ✓</span>';
+  try {
+    await wyslijFeedbackNaBackend(parseInt(pid), ocena);
+  } catch (err) {
+    console.error('Błąd wysyłania feedbacku', err);
+  }
+};
+
+function dodajOdpowiedzBota(dane) {
+  const wrap = document.createElement('div');
+  wrap.className = 'message-wrap';
+  wrap.dataset.ts = new Date().toLocaleString('pl-PL');
+  const pct = Math.round((dane.podobienstwo || 0) * 100);
+  const pct2 = Math.round((dane.podobienstwo2 || 0) * 100);
+  let sourcesHtml = '';
+  if (dane.tytul) {
+    sourcesHtml +=
+      '<div class="source-tag"><span class="dot"></span><span class="title-text">' +
+      escHtml(dane.tytul) +
+      '</span></div>';
+  }
+  if (dane.tytul2) {
+    sourcesHtml +=
+      '<div class="source-tag"><span class="dot secondary"></span><span class="title-text">' +
+      escHtml(dane.tytul2) +
+      '</span></div>';
+  }
+  let barsHtml = '';
+  if (dane.tytul) {
+    barsHtml +=
+      '<div class="sim-row"><span class="sim-label">dopasowanie</span><div class="sim-track"><div class="sim-fill" data-pct="' +
+      pct +
+      '"></div></div><span class="sim-pct">' +
+      pct +
+      '%</span></div>';
+  }
+  if (dane.tytul2) {
+    barsHtml +=
+      '<div class="sim-row"><span class="sim-label">powiązany</span><div class="sim-track"><div class="sim-fill secondary" data-pct="' +
+      pct2 +
+      '"></div></div><span class="sim-pct secondary">' +
+      pct2 +
+      '%</span></div>';
+  }
+
+  let czystyKopiowanyTekst = dane.wstep || dane.odpowiedz || '';
+  if (dane.punkty && dane.punkty.length > 0) {
+    czystyKopiowanyTekst += '\n' + dane.punkty.map((p) => '- ' + p).join('\n');
+  }
+  const skrzyneczkacopyHtml = escHtml(czystyKopiowanyTekst);
+
+  let sformatowanaPelnaTresc = escHtml(dane.pelna_tresc || '');
+  if (dane.najlepsze_zdanie && sformatowanaPelnaTresc) {
+    const czysteNajlepszeZdanie = escHtml(dane.najlepsze_zdanie);
+    if (sformatowanaPelnaTresc.includes(czysteNajlepszeZdanie)) {
+      sformatowanaPelnaTresc = sformatowanaPelnaTresc.replace(
+        czysteNajlepszeZdanie,
+        '<mark class="highlight-zdanie">' + czysteNajlepszeZdanie + '</mark>',
+      );
+    }
+  }
+
+  let sformatowanaZlamanaTresc = sformatowanaPelnaTresc.replace(/\n+/g, '<br><br>');
+  if (dane.slowa_kluczowe && dane.slowa_kluczowe.length > 0) {
+    dane.slowa_kluczowe.forEach((slowo) => {
+      if (slowo.length >= 3) {
+        const regex = new RegExp(`(${slowo})`, 'gi');
+        sformatowanaZlamanaTresc = sformatowanaZlamanaTresc.replace(
+          regex,
+          '<mark class="highlight-zdanie" style="background-color: var(--accent); color: #000;">$1</mark>',
+        );
       }
-    }
-    function przelaczMotyw() {
-      document.body.classList.toggle('light-theme');
-      const isLight = document.body.classList.contains('light-theme');
-      localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark');
-    }
+    });
+  }
 
-    // Obsługa widoczności dopasowania
-    const SIM_KEY = 'pwr_pokaz_dopasowanie';
-    function ladujUstawieniaDopasowania() {
-      if (localStorage.getItem(SIM_KEY) !== 'true') {
-        document.body.classList.add('hide-similarity');
-      }
-      aktualizujPrzyciskDopasowania();
-    }
-    function przelaczDopasowanie() {
-      document.body.classList.toggle('hide-similarity');
-      const ukryte = document.body.classList.contains('hide-similarity');
-      localStorage.setItem(SIM_KEY, !ukryte ? 'true' : 'false');
-      aktualizujPrzyciskDopasowania();
-    }
-    function aktualizujPrzyciskDopasowania() {
-      const checkbox = document.getElementById('btn-toggle-sim');
-      if (checkbox) {
-        const ukryte = document.body.classList.contains('hide-similarity');
-        checkbox.checked = !ukryte;
-      }
-    }
+  const natychmiastowyParagraf = dane.pelna_tresc
+    ? '<div style="margin-top: 8px;"><button class="btn-rozwin" onclick="rozwinTresc(this)">▼ pokaż pełny paragraf</button>' +
+      '<div class="pelna-tresc" style="display: none; line-height: 1.5; font-size: 0.9em; margin-top: 8px;">' +
+      sformatowanaZlamanaTresc +
+      '</div></div>'
+    : '';
 
-    // Zarządzanie bazami zrodlowymi
-    let aktywneZrodla = new Set(['Wszystkie dokumenty']);
-    let wybraneZrodloIndywidualne = null;
+  wrap.innerHTML =
+    '<div class="msg-bot">' +
+    '<div class="bot-avatar"><img src="static/logo.png" alt="Logo"></div>' +
+    '<div class="bot-content">' +
+    '<div class="bubble type-target"></div>' +
+    natychmiastowyParagraf +
+    (sourcesHtml ? '<div class="source-row" style="opacity:0">' + sourcesHtml + '</div>' : '') +
+    '<div style="opacity:0">' +
+    barsHtml +
+    '</div>' +
+    '<div class="feedback-row" style="opacity:0">' +
+    '<button class="btn-feedback" data-ocena="1" onclick="wyslijFeedback(this)">👍</button>' +
+    '<button class="btn-feedback" data-ocena="-1" onclick="wyslijFeedback(this)">👎</button>' +
+    '<button class="btn-copy" onclick="kopiujOdpowiedz(this)" data-copy="' +
+    skrzyneczkacopyHtml +
+    '" data-tooltip="Skopiuj odpowiedź">📋</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>';
 
-    ladujMotyw();
-    ladujUstawieniaDopasowania();
+  if (dane.pytanie_id) {
+    wrap.querySelectorAll('.btn-feedback').forEach((btn) => {
+      btn.dataset.pid = dane.pytanie_id;
+    });
+  }
+  chatEl.appendChild(wrap);
+  scrollDol(chatEl);
 
-    // pamięć kontekstu – ostatni paragraf i pytanie
-    let ostatniKontekstTytul = null;
-    let ostatniKontekstPytanie = null;
+  const docelowyHtml = renderujOdpowiedz(dane);
+  const targetBubble = wrap.querySelector('.type-target');
+  let stalyHtml = '';
+  let kursorWTagu = false;
+  let zapamietywanyTag = '';
+  let i = 0;
 
-    // Przywróć historię po odświeżeniu strony (Przeniesiono do pamięci trwalszej)
-    const HISTORIA_KEY = 'pwr_chat_historia';
-    function zapiszHistorie(pytanie, odpowiedz) {
-      const hist = JSON.parse(localStorage.getItem(HISTORIA_KEY) || '[]');
-      hist.push({ pytanie, odpowiedz, czas: new Date().toLocaleTimeString() });
-      if (hist.length > 20) hist.shift(); // max 20 wpisów
-      localStorage.setItem(HISTORIA_KEY, JSON.stringify(hist));
-    }
-    function wczytajHistorie() {
-      const hist = JSON.parse(localStorage.getItem(HISTORIA_KEY) || '[]');
-      if (hist.length === 0) return;
-
-      ukryjWitajke();
-      hist.forEach(({ pytanie, odpowiedz, czas }) => {
-        dodajWiadomoscUzytkownika(pytanie, czas);
-        // uproszczone odtworzenie — tylko tekst
-        const wrap = document.createElement('div');
-        wrap.className = 'message-wrap';
-        wrap.dataset.ts = czas || new Date().toLocaleString('pl-PL');
-        wrap.innerHTML = `<div class="msg-bot"><div class="bot-avatar"><img src="static/logo.png" alt="Logo"></div>
-        <div class="bot-content"><div class="bubble">${escHtml(odpowiedz)}</div></div></div>`;
-        chatEl.appendChild(wrap);
+  function streamujZnak() {
+    if (i >= docelowyHtml.length) {
+      targetBubble.innerHTML = docelowyHtml;
+      wrap.querySelectorAll('[style*="opacity"]').forEach((el) => {
+        el.style.opacity = '1';
+        el.style.transition = 'opacity 0.6s ease';
       });
-      scrollDol();
+      requestAnimationFrame(() => {
+        wrap.querySelectorAll('.sim-fill').forEach((bar) => {
+          setTimeout(() => {
+            bar.style.width = bar.dataset.pct + '%';
+          }, 100);
+        });
+      });
+      scrollDol(chatEl);
+      return;
     }
-    // window.addEventListener('load', wczytajHistorie); // Tymczasowo wyłączone
+    const litera = docelowyHtml[i];
+    if (litera === '<') kursorWTagu = true;
+    if (kursorWTagu) {
+      zapamietywanyTag += litera;
+      if (litera === '>') {
+        kursorWTagu = false;
+        stalyHtml += zapamietywanyTag;
+        zapamietywanyTag = '';
+      }
+    } else {
+      stalyHtml += litera;
+      targetBubble.innerHTML = stalyHtml;
+      if (i % 10 === 0) scrollDol(chatEl);
+    }
+    i++;
+    setTimeout(streamujZnak, kursorWTagu ? 0 : 5);
+  }
+  streamujZnak();
+}
 
-    // auto-resize textarea
-    inputEl.addEventListener('input', () => {
-      inputEl.style.height = 'auto';
-      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
-      const len = inputEl.value.length;
-      const hint = document.getElementById('hint');
-      if (len > 200) {
-        hint.textContent = `⚠ Za długie pytanie (${len}/200)`;
-        hint.style.color = 'var(--danger)';
-      } else {
+async function wyslij() {
+  const tekst = inputEl.value.trim();
+  if (tekst.length < 3) {
+    const hint = document.getElementById('hint');
+    if (hint) {
+      hint.textContent = '⚠ Twoje pytanie jest za krótkie!';
+      hint.style.color = 'var(--danger)';
+      setTimeout(() => {
         hint.textContent = 'Enter – wyślij · Shift+Enter – nowa linia';
         hint.style.color = '';
-      }
-    });
+      }, 3000);
+    }
+    return;
+  }
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  btnEl.disabled = true;
 
-    // Enter wyślij, Shift+Enter nowa linia
-    inputEl.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        wyslij();
-      }
-    });
+  dodajWiadomoscUzytkownika(chatEl, tekst);
+  pokazTyping(chatEl);
 
-    function zadaj(chip) {
-      inputEl.value = chip.textContent;
-      wyslij();
+  try {
+    let aktZrodlo = wybraneZrodloIndywidualne || 'Wszystkie dokumenty';
+    if (aktZrodlo === 'odlacz') {
+      ukryjTyping();
+      dodajOdpowiedzBota({
+        odpowiedz: 'Baza wiedzy jest odłączona. Podłącz ją w opcjach.',
+        tytul: null,
+        podobienstwo: 0,
+      });
+      btnEl.disabled = false;
+      return;
     }
 
-    function ukryjWitajke() {
-      const w = document.getElementById('welcome');
-      if (w) w.remove();
-    }
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
 
-    function dodajWiadomoscUzytkownika(tekst, znacznikCzasu = null) {
-      ukryjWitajke();
-      const wrap = document.createElement('div');
-      wrap.className = 'message-wrap';
-      wrap.dataset.ts = znacznikCzasu || new Date().toLocaleString('pl-PL');
-      wrap.innerHTML = `
-      <div class="msg-user">
-        <div class="bubble">${escHtml(tekst)}</div>
-      </div>`;
-      chatEl.appendChild(wrap);
-      scrollDol();
-    }
+    const dane = await wyslijZapytanie(
+      tekst,
+      aktZrodlo,
+      ostatniKontekstTytul,
+      ostatniKontekstPytanie,
+      token,
+    );
 
-    function pokazTyping() {
-      const el = document.createElement('div');
-      el.className = 'typing-wrap';
-      el.id = 'typing';
-      el.innerHTML = `
-      <div class="typing">
-        <div class="bot-avatar"><img src="static/logo.png" alt="Logo"></div>
-        <div class="typing-dots">
-          <span></span><span></span><span></span>
-        </div>
-        <div class="typing-text">Szukam informacji...</div>
-      </div>`;
-      chatEl.appendChild(el);
-      scrollDol();
-    }
+    ukryjTyping();
 
-    function ukryjTyping() {
-      const el = document.getElementById('typing');
-      if (el) el.remove();
-    }
+    if (dane.disambiguation) {
+      let opcjeHtml = '';
+      dane.opcje.forEach((opcja) => {
+        opcjeHtml += `<button class="btn-chip chip">${escHtml(opcja)}</button>`;
+      });
+      const disambigHtml = `<div style="margin-bottom: 8px;">${escHtml(dane.komunikat)}</div><div class="chips-container" style="flex-wrap: wrap;">${opcjeHtml}</div>`;
 
-    function renderujOdpowiedz(dane) {
-      if (dane.debug) {
-        return '<div>' + escHtml(dane.odpowiedz || '') + '</div>' +
-          '<div style="margin-top:10px; padding:10px; background:#1a1a1a; color:#ff3b30; font-family:monospace; font-size:11px; border-radius:4px; overflow-x:auto; white-space:pre;">' +
-          '<strong>TRACEBACK (ADMIN):</strong>\n' + escHtml(dane.debug) +
-          '</div>';
-      }
-      if (dane.punkty) {
-        const punktyHtml = dane.punkty.map(item => '<li>' + escHtml(item) + '</li>').join('');
-        const zachetaHtml = dane.zacheta
-          ? '<div class="odp-zacheta">💡 ' + escHtml(dane.zacheta) + '</div>'
-          : '';
-        return '<div class="odp-wstep">' + escHtml(dane.wstep) + '</div>' +
-          '<ul class="odp-punkty">' + punktyHtml + '</ul>' +
-          zachetaHtml;
-      }
-      return '<div>' + escHtml(dane.odpowiedz || '') + '</div>';
-    }
-
-    function rozwinTresc(btn) {
-      const div = btn.nextElementSibling;
-      div.hidden = !div.hidden;
-      btn.textContent = div.hidden ? '▼ pokaż pełny paragraf' : '▲ zwiń';
-    }
-
-    async function kopiujOdpowiedz(btn) {
-      try {
-        const tekstData = btn.getAttribute('data-copy');
-        await navigator.clipboard.writeText(tekstData);
-        const oldHtml = btn.innerHTML;
-        btn.innerHTML = '✓';
-        btn.classList.add('copied');
-        setTimeout(() => {
-          btn.innerHTML = oldHtml;
-          btn.classList.remove('copied');
-        }, 2000);
-      } catch (err) {
-        console.error('Nie udało się skopiować', err);
-      }
-    }
-    function dodajOdpowiedzBota(dane) {
       const wrap = document.createElement('div');
       wrap.className = 'message-wrap';
       wrap.dataset.ts = new Date().toLocaleString('pl-PL');
-      const pct = Math.round((dane.podobienstwo || 0) * 100);
-      const pct2 = Math.round((dane.podobienstwo2 || 0) * 100);
-      let sourcesHtml = '';
-      if (dane.tytul) {
-        sourcesHtml += '<div class="source-tag">' +
-          '<span class="dot"></span>' +
-          '<span class="title-text">' + escHtml(dane.tytul) + '</span>' +
-          '</div>';
-      }
-      if (dane.tytul2) {
-        sourcesHtml += '<div class="source-tag">' +
-          '<span class="dot secondary"></span>' +
-          '<span class="title-text">' + escHtml(dane.tytul2) + '</span>' +
-          '</div>';
-      }
-      let barsHtml = '';
-      if (dane.tytul) {
-        barsHtml += '<div class="sim-row">' +
-          '<span class="sim-label">dopasowanie</span>' +
-          '<div class="sim-track"><div class="sim-fill" data-pct="' + pct + '"></div></div>' +
-          '<span class="sim-pct">' + pct + '%</span>' +
-          '</div>';
-      }
-      if (dane.tytul2) {
-        barsHtml += '<div class="sim-row">' +
-          '<span class="sim-label">powiązany</span>' +
-          '<div class="sim-track"><div class="sim-fill secondary" data-pct="' + pct2 + '"></div></div>' +
-          '<span class="sim-pct secondary">' + pct2 + '%</span>' +
-          '</div>';
-      }
-      // Przygotowanie czystego tekstu do schowka bez wciągania markerów oraz HTML-owych tagów
-      let czystyKopiowanyTekst = dane.wstep || dane.odpowiedz || '';
-      if (dane.punkty && dane.punkty.length > 0) {
-        czystyKopiowanyTekst += '\n' + dane.punkty.map(p => '- ' + p).join('\n');
-      }
+      wrap.innerHTML = `<div class="msg-bot"><div class="bot-avatar"><img src="static/logo.png" alt="Logo"></div><div class="bot-content"><div class="bubble">${disambigHtml}</div></div></div>`;
 
-      const skrzyneczkacopyHtml = escHtml(czystyKopiowanyTekst);
+      // Delegacja kliknięć z powrotem do czatu
+      wrap.querySelectorAll('.chip').forEach((btn) => {
+        btn.addEventListener('click', () => zadaj(btn));
+      });
 
-      // Zgodnie z decyzją projektową rezygnujemy z powiązań przy odpowiadaniu przez bota
-      let sformatowanaPelnaTresc = escHtml(dane.pelna_tresc || '');
-      if (dane.najlepsze_zdanie && sformatowanaPelnaTresc) {
-        const czysteNajlepszeZdanie = escHtml(dane.najlepsze_zdanie);
-        if (sformatowanaPelnaTresc.includes(czysteNajlepszeZdanie)) {
-          sformatowanaPelnaTresc = sformatowanaPelnaTresc.replace(
-            czysteNajlepszeZdanie,
-            '<mark class="highlight-zdanie">' + czysteNajlepszeZdanie + '</mark>'
-          );
-        }
-      }
-
-      // Optymalizacja UX: złamania html & Markowanie (Highlight) Wyrazów kluczowych
-      let sformatowanaZlamanaTresc = sformatowanaPelnaTresc.replace(/\n+/g, '<br><br>');
-      if (dane.slowa_kluczowe && dane.slowa_kluczowe.length > 0) {
-        dane.slowa_kluczowe.forEach(slowo => {
-          if (slowo.length >= 3) {
-            const regex = new RegExp(`(${slowo})`, 'gi');
-            sformatowanaZlamanaTresc = sformatowanaZlamanaTresc.replace(regex, '<mark class="highlight-zdanie" style="background-color: var(--accent); color: #000;">$1</mark>');
-          }
-        });
-      }
-
-      const natychmiastowyParagraf = dane.pelna_tresc
-        ? '<div style="margin-top: 8px;"><button class="btn-rozwin" onclick="rozwinTresc(this)">▼ pokaż pełny paragraf</button>' +
-        '<div class="pelna-tresc" style="display: none; line-height: 1.5; font-size: 0.9em; margin-top: 8px;">' +
-        sformatowanaZlamanaTresc + '</div></div>'
-        : '';
-
-      wrap.innerHTML = '<div class="msg-bot">' +
-
-        '<div class="bot-avatar"><img src="static/logo.png" alt="Logo"></div>' +
-        '<div class="bot-content">' +
-        '<div class="bubble type-target"></div>' + // Pusta bańka na efekt literowania
-        natychmiastowyParagraf + // Wrzutka paragrafu natężona na stałe do DOM, odporna na pętle
-        (sourcesHtml ? '<div class="source-row" style="opacity:0">' + sourcesHtml + '</div>' : '') +
-        '<div style="opacity:0">' + barsHtml + '</div>' + // Paski statystyk
-        '<div class="feedback-row" style="opacity:0">' +
-        '<button class="btn-feedback" data-ocena="1" onclick="wyslijFeedback(this)">👍</button>' +
-        '<button class="btn-feedback" data-ocena="-1" onclick="wyslijFeedback(this)">👎</button>' +
-        '<button class="btn-copy" onclick="kopiujOdpowiedz(this)" data-copy="' + skrzyneczkacopyHtml + '" data-tooltip="Skopiuj odpowiedź">📋</button>' +
-        '</div>' +
-        '</div>' +
-        '</div>';
-      if (dane.pytanie_id) {
-        wrap.querySelectorAll('.btn-feedback').forEach(btn => {
-          btn.dataset.pid = dane.pytanie_id;
-        });
-      }
       chatEl.appendChild(wrap);
-      scrollDol();
-      // === Animacja Maszyny piszącej (Typewriter) ===
-      const docelowyHtml = renderujOdpowiedz(dane);
-      const targetBubble = wrap.querySelector('.type-target');
-      let stalyHtml = '';
-      let kursorWTagu = false;
-      let zapamietywanyTag = '';
-      let i = 0;
-      function streamujZnak() {
-        if (i >= docelowyHtml.length) {
-          targetBubble.innerHTML = docelowyHtml;
-          wrap.querySelectorAll('[style*="opacity"]').forEach(el => {
-            el.style.opacity = '1';
-            el.style.transition = 'opacity 0.6s ease';
-          });
-          requestAnimationFrame(() => {
-            wrap.querySelectorAll('.sim-fill').forEach(bar => {
-              setTimeout(() => { bar.style.width = bar.dataset.pct + '%'; }, 100);
-            });
-          });
-          scrollDol();
-          return;
-        }
-        const litera = docelowyHtml[i];
-        if (litera === '<') kursorWTagu = true;
-        if (kursorWTagu) {
-          zapamietywanyTag += litera;
-          if (litera === '>') {
-            kursorWTagu = false;
-            stalyHtml += zapamietywanyTag;
-            zapamietywanyTag = '';
-          }
-        } else {
-          stalyHtml += litera;
-          targetBubble.innerHTML = stalyHtml;
-          // Zapobiega gubieniu ostrości podczas czytania
-          if (i % 10 === 0) scrollDol();
-        }
-
-        i++;
-        // Zatrzymujemy się na 5 minimilisekund po znakach w słowach, i unikamy zacięcia w kodowaniu DOM
-        setTimeout(streamujZnak, kursorWTagu ? 0 : 5);
-      }
-
-      // Odpal magię
-      streamujZnak();
-    }
-    async function wyslij() {
-      const tekst = inputEl.value.trim();
-      if (tekst.length < 3) {
-        const hint = document.getElementById('hint');
-        hint.textContent = '⚠ Twoje pytanie jest za krótkie!';
-        hint.style.color = 'var(--danger)';
-        setTimeout(() => {
-          hint.textContent = 'Enter – wyślij · Shift+Enter – nowa linia';
-          hint.style.color = '';
-        }, 3000);
-        return;
-      }
-      inputEl.value = '';
-      inputEl.style.height = 'auto';
-      btnEl.disabled = true;
-
-      dodajWiadomoscUzytkownika(tekst);
-      pokazTyping();
-
-      try {
-        let aktZrodlo = wybraneZrodloIndywidualne || "Wszystkie dokumenty";
-        if (aktZrodlo === "odlacz") {
-          ukryjTyping();
-          dodajOdpowiedzBota({ odpowiedz: "Baza wiedzy jest odłączona. Podłącz ją w opcjach.", tytul: null, podobienstwo: 0 });
-          btnEl.disabled = false;
-          return;
-        }
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-
-        const res = await fetch(API_BASE_URL + '/zapytaj', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY },
-          body: JSON.stringify({
-            pytanie: tekst,
-            zrodlo: aktZrodlo,
-            kontekst_tytul: ostatniKontekstTytul,
-            kontekst_pytanie: ostatniKontekstPytanie,
-            token: token
-          }),
-        });
-
-
-        const dane = await res.json();
-        ukryjTyping();
-
-        if (dane.disambiguation) {
-          let opcjeHtml = '';
-          dane.opcje.forEach(opcja => {
-            opcjeHtml += `<button class="btn-chip" onclick="zadaj(this)">${escHtml(opcja)}</button>`;
-          });
-          const disambigHtml = `<div style="margin-bottom: 8px;">${escHtml(dane.komunikat)}</div><div class="chips-container" style="flex-wrap: wrap;">${opcjeHtml}</div>`;
-
-          const wrap = document.createElement('div');
-          wrap.className = 'message-wrap';
-          wrap.dataset.ts = new Date().toLocaleString('pl-PL');
-          wrap.innerHTML = `<div class="msg-bot"><div class="bot-avatar"><img src="static/logo.png" alt="Logo"></div><div class="bot-content"><div class="bubble">${disambigHtml}</div></div></div>`;
-          chatEl.appendChild(wrap);
-          scrollDol();
-          zapiszHistorie(tekst, dane.komunikat);
-          return;
-        }
-
-        dodajOdpowiedzBota(dane);
-
-        // zapamiętaj kontekst dla następnego pytania
-        if (dane.kontekst_tytul) {
-          ostatniKontekstTytul = dane.kontekst_tytul;
-          ostatniKontekstPytanie = tekst;
-        }
-      } catch (err) {
-        ukryjTyping();
-        dodajOdpowiedzBota({
-          odpowiedz: '⚠ Serwer niedostępny. Odśwież stronę lub spróbuj za chwilę.',
-          tytul: null,
-          podobienstwo: 0,
-        });
-      } finally {
-        btnEl.disabled = false;
-        inputEl.focus();
-      }
+      scrollDol(chatEl);
+      zapiszHistorieLokalnie(tekst, dane.komunikat);
+      return;
     }
 
-    async function wyslijFeedback(btn) {
-      const pid = btn.dataset.pid;
-      const ocena = parseInt(btn.dataset.ocena);
-      if (!pid) return;
-      btn.closest('.feedback-row').innerHTML =
-        ocena === 1 ? '<span style="color:var(--accent)">Dzięki! ✓</span>'
-          : '<span style="color:var(--muted)">Zapisano, poprawimy ✓</span>';
-      await fetch(API_BASE_URL + '/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY },
-        body: JSON.stringify({ pytanie_id: parseInt(pid), ocena })
-      });
+    dodajOdpowiedzBota(dane);
+
+    if (dane.kontekst_tytul) {
+      ostatniKontekstTytul = dane.kontekst_tytul;
+      ostatniKontekstPytanie = tekst;
     }
+  } catch (err) {
+    ukryjTyping();
+    renderujKomunikatBledu(chatEl);
+  } finally {
+    btnEl.disabled = false;
+    inputEl.focus();
+  }
+}
 
-    function scrollDol() {
-      chatEl.scrollTop = chatEl.scrollHeight;
+// Obsługa przycisku "Wróć w dół"
+const btnScrollDown = document.getElementById('btn-scroll-down');
+if (btnScrollDown && chatEl) {
+  chatEl.addEventListener('scroll', () => {
+    if (chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight > 150) {
+      btnScrollDown.classList.add('show');
+    } else {
+      btnScrollDown.classList.remove('show');
     }
+  });
+}
 
-    // Obsługa przycisku "Wróć w dół"
-    const btnScrollDown = document.getElementById('btn-scroll-down');
-    if (btnScrollDown) {
-      chatEl.addEventListener('scroll', () => {
-        // Pokaż guzik, jeśli użytkownik podjechał więcej niż 150px od spodu do góry
-        if (chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight > 150) {
-          btnScrollDown.classList.add('show');
-        } else {
-          btnScrollDown.classList.remove('show');
-        }
-      });
-    }
+// Obsługa gestów swipe dla bocznego menu (Sidebar)
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
 
-    function wyczyscChat() {
-      sessionStorage.removeItem(HISTORIA_KEY);
-      ostatniKontekstTytul = null;
-      ostatniKontekstPytanie = null;
-      chatEl.innerHTML = `<div class="welcome" id="welcome">
-      <div class="big">Zapytaj o <span>regulamin</span></div>
-      <p>Przeszukuję regulamin studiów PWr i zwracam właściwy paragraf wraz ze źródłem.</p>
-      <div class="chips">
-        <div class="chip" onclick="zadaj(this)">ile razy można podejść do egzaminu?</div>
-        <div class="chip" onclick="zadaj(this)">kiedy można wziąć urlop dziekański?</div>
-        <div class="chip" onclick="zadaj(this)">co grozi za nieobecności?</div>
-        <div class="chip" onclick="zadaj(this)">jak wznowić studia po skreśleniu?</div>
-        <div class="chip" onclick="zadaj(this)">jak oblicza się średnią ocen?</div>
-      </div></div>`;
-    }
+document.addEventListener(
+  'touchstart',
+  (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  },
+  { passive: true },
+);
 
-    function escHtml(s) {
-      return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    async function pokazBazeWiedzy() {
-      const infoDiv = document.getElementById('infoBazaWidzy');
-      if (infoDiv.style.display === 'block') {
-        infoDiv.style.display = 'none';
-        return;
-      }
-      infoDiv.style.display = 'block';
-      infoDiv.innerHTML = '<div style="color:var(--accent);font-size:12px;padding:10px;">🔍 Przeszukiwanie dysku...</div>';
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/zrodla`);
-        const pliki = await res.json();
-
-        let html = '<div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">📂 Zarządzanie Wiedzą</div>';
-
-        // Opcja: Wszystkie dokumenty
-        const jestWszystko = wybraneZrodloIndywidualne === null || wybraneZrodloIndywidualne === "Wszystkie dokumenty";
-        html += `
-          <div class="sb-toggle-row">
-            <div>
-              <div style="font-size:13px;color:var(--accent);font-weight:600;">📚 Wszystkie bazy (tryb zbiorczy)</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;">Przeszukuje wszystkie dostępne pliki naraz</div>
-            </div>
-            <label class="sb-toggle-sw">
-              <input type="checkbox" ${jestWszystko ? 'checked' : ''} onchange="przelaczTrybZbiorczy(this)">
-              <span class="sb-slider"></span>
-            </label>
-          </div>`;
-
-        // Poszczególne pliki
-        pliki.forEach(plik => {
-          if (plik === 'dane.json') return; // Ukrywamy plik techniczny 'dane'
-
-          const aktywny = (wybraneZrodloIndywidualne === plik);
-          let nazwaWyswietlana = plik.replace('.json', '.pdf');
-          if (plik === 'baza_wiedzy.json') nazwaWyswietlana = 'regulamin.pdf';
-
-          html += `
-          <div class="sb-toggle-row" style="opacity: ${jestWszystko ? '0.5' : '1'}">
-            <div>
-              <div style="font-size:13px;color:var(--text);">📄 ${nazwaWyswietlana}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;">Wczytany dokument regulaminowy</div>
-            </div>
-            <label class="sb-toggle-sw">
-              <input type="checkbox" ${aktywny && !jestWszystko ? 'checked' : ''} ${jestWszystko ? 'disabled' : ''} data-plik="${plik}" onchange="przelaczBaze(this)">
-              <span class="sb-slider"></span>
-            </label>
-          </div>`;
-        });
-
-
-        infoDiv.innerHTML = html;
-      } catch (e) {
-        infoDiv.innerHTML = '<div style="color:var(--danger);font-size:12px;">Nie udało się wczytać listy baz.</div>';
-      }
-    }
-
-    function przelaczTrybZbiorczy(cb) {
-      if (cb.checked) {
-        wybraneZrodloIndywidualne = "Wszystkie dokumenty";
-      } else {
-        wybraneZrodloIndywidualne = "baza_wiedzy.json"; // fallback
-      }
-      pokazBazeWiedzy(); // odśwież widok
-    }
-
-    function przelaczBaze(cb) {
-      if (cb.checked) {
-        wybraneZrodloIndywidualne = cb.dataset.plik;
-      } else {
-        wybraneZrodloIndywidualne = "odlacz";
-      }
-      // odznacz inne checkboxy w widoku (zachowanie radia)
-      const inputs = document.querySelectorAll('#infoBazaWidzy input[data-plik]');
-      inputs.forEach(i => { if (i !== cb) i.checked = false; });
-    }
-
-    function otworzOpcje() {
-      document.getElementById('opcjeModal').classList.add('active');
-    }
-    function zamknijOpcje(event) {
-      if (!event || event.target === document.getElementById('opcjeModal') || event.target.className === 'btn-close') {
-        document.getElementById('opcjeModal').classList.remove('active');
-        document.getElementById('infoBazaWidzy').style.display = 'none';
-      }
-    }
-    function zapiszPdf() {
-      // 1. Zamknij menu opcji żeby nie wpadło do wydruku PDF
-      zamknijOpcje();
-
-      // 2. Chwytamy cały nasz box chatu
-      const element = document.getElementById('chat');
-
-      // 3. Konfigurujemy perfekcyjny zrzut HTML na wektory i Canvas
-      const kolorTla = document.body.classList.contains('light-theme') ? '#f5f5f7' : '#0d0d0f';
-      const opt = {
-        margin: [10, 5, 10, 5],
-        filename: 'rozmowa_regulamin_pwr.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: kolorTla },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      // 4. Transformujemy kod DOM w gotowy, czytelny PDF ze stylami CSS i UTF-8!
-      html2pdf().set(opt).from(element).save();
-    }
-
-    function toggleSidebar() {
+document.addEventListener(
+  'touchend',
+  (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    const diffX = touchEndX - touchStartX;
+    const diffY = touchEndY - touchStartY;
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 80) {
       const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('open');
-      if (sidebar.classList.contains('open')) {
-        zaladujHistorie();
+      const isOpen = sidebar.classList.contains('open');
+      if (diffX > 0 && !isOpen && touchStartX < 40) {
+        toggleSidebar();
+      } else if (diffX < 0 && isOpen) {
+        toggleSidebar();
       }
     }
-
-    async function zaladujHistorie() {
-      const content = document.getElementById('sidebar-content');
-      content.innerHTML = '<p style="padding:16px;color:var(--muted);font-size:12px;">Ładowanie historii...</p>';
-
-      try {
-        const res = await fetch(API_BASE_URL + '/historia', { headers: { 'Authorization': 'Bearer ' + API_KEY } });
-        const dane = await res.json();
-
-        if (dane.error) {
-          content.innerHTML = '<p style="padding:16px;color:var(--danger);font-size:12px;">Błąd bazy: ' + escHtml(dane.error) + '</p>';
-          return;
-        }
-
-
-        if (!Array.isArray(dane) || dane.length === 0) {
-          content.innerHTML = '<p style="padding:16px;color:var(--muted);font-size:12px;">Brak wpisów w bazie.</p>';
-          return;
-        }
-
-        content.innerHTML = dane.map(d => {
-          // Zabezpieczenie apostrofów dla onclick
-          const escapedValue = escHtml(d.pytanie).replace(/'/g, "\\'");
-          return '<div class="sidebar-item" onclick="wybierzZHistorii(\'' + escapedValue + '\')">' + escHtml(d.pytanie) + '</div>';
-        }).join('');
-
-      } catch (err) {
-        content.innerHTML = '<p style="padding:16px;color:var(--danger);font-size:12px;">Błąd pobierania historii.</p>';
-      }
-    }
-
-
-    function wybierzZHistorii(pytanie) {
-      toggleSidebar();       // Zamknij pasek
-      inputEl.value = pytanie; // Wstaw treść
-      wyslij();              // Przekaż od razu do bota
-    }
-
-    // Obsługa gestów swipe dla bocznego menu (Sidebar) - Mobile First
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-
-    document.addEventListener('touchstart', e => {
-      touchStartX = e.changedTouches[0].screenX;
-      touchStartY = e.changedTouches[0].screenY;
-    }, { passive: true });
-
-    document.addEventListener('touchend', e => {
-      touchEndX = e.changedTouches[0].screenX;
-      touchEndY = e.changedTouches[0].screenY;
-      obsluzGestSwipe();
-    }, { passive: true });
-
-    function obsluzGestSwipe() {
-      const diffX = touchEndX - touchStartX;
-      const diffY = touchEndY - touchStartY;
-      
-      // Sprawdzamy czy gest był poziomy i odpowiednio długi (min. 80px)
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 80) {
-        const sidebar = document.getElementById('sidebar');
-        const isOpen = sidebar.classList.contains('open');
-        
-        if (diffX > 0 && !isOpen && touchStartX < 40) {
-          // Swipe w prawo przy lewej krawędzi ekranu -> Otwórz sidebar
-          toggleSidebar();
-        } else if (diffX < 0 && isOpen) {
-          // Swipe w lewo przy otwartym sidebarze -> Zamknij sidebar
-          toggleSidebar();
-        }
-      }
-    }
+  },
+  { passive: true },
+);

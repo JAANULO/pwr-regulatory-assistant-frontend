@@ -1,0 +1,28 @@
+{
+  "name": "pwr-regulatory-assistant-frontend",
+  "version": "1.0.0",
+  "description": "To jest repozytorium frontendu dla aplikacji Asystenta Regulaminowego PWr. Projekt ten to tzw. Single Page Application (SPA), składająca się w pełni ze statycznych plików HTML, CSS i JavaScript.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint \"static/js/**/*.js\"",
+    "format": "prettier --write \"static/js/**/*.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JAANULO/pwr-regulatory-assistant-frontend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JAANULO/pwr-regulatory-assistant-frontend/issues"
+  },
+  "homepage": "https://github.com/JAANULO/pwr-regulatory-assistant-frontend#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.4"
+  }
+}
