@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metody i Narzędzia Big Data - Notatki</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="prism.js"></script>
+    <script src="prism-python.min.js"></script>
+    <script src="vis-network.min.js"></script>
+    <style>
+        :root {
+            --accent: #38bdf8;
+            --accent-secondary: #818cf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --gradient-start: rgba(99, 102, 241, 0.12);
+            --gradient-end: rgba(56, 189, 248, 0.1);
+        }
+        .graph-svg {
+            width: 100%;
+            height: 200px;
+            overflow: visible;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <nav>
+            <a href="index.html">← Powrót do menu</a>
+        </nav>
+
+        <header>
+            <h1 id="main-title">Ładowanie...</h1>
+            <p class="subtitle" id="main-subtitle"></p>
+        </header>
+
+        <div class="layout-wrapper">
+            <!-- SPIS TREŚCI (SIDEBAR) -->
+            <aside class="sidebar">
+                <h3>Spis Treści</h3>
+                <ul id="toc-container">
+                    <!-- Spis treści generowany dynamicznie -->
+                </ul>
+            </aside>
+
+            <!-- GŁÓWNA TREŚĆ -->
+            <main class="cards-list" id="cards-container">
+                <!-- Karty generowane dynamicznie -->
+            </main>
+        </div>
+    </div>
+
+    <!-- SCRIPT FOR DYNAMIC RENDERING AND WIDGET -->
+    <script>
+        // Szablon kodu widgetu BM25
+        const widgetHTML = `
+            <div class="widget-box">
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Symulator Wykresu Nasycenia BM25</h3>
+                <div class="widget-controls">
+                    <div class="control-group">
+                        <label>Parametr k₁ (nasycenie częstości): <span id="k1-val">1.50</span></label>
+                        <input type="range" id="k1-slider" min="0" max="3" step="0.1" value="1.5">
+                    </div>
+                    <div class="control-group">
+                        <label>Parametr b (kara za długość): <span id="b-val">0.75</span></label>
+                        <input type="range" id="b-slider" min="0" max="1" step="0.05" value="0.75">
+                    </div>
+                    <div class="control-group">
+                        <label>Stosunek długości |D| / avgdl: <span id="len-val">1.00</span></label>
+                        <input type="range" id="len-slider" min="0.1" max="3" step="0.1" value="1.0">
+                    </div>
+                </div>
+                <div class="widget-display">
+                    <svg class="graph-svg" id="bm25-chart" viewBox="0 0 400 200">
+                        <line x1="40" y1="170" x2="380" y2="170" stroke="#475569" stroke-width="2"/>
+                        <line x1="40" y1="20" x2="40" y2="170" stroke="#475569" stroke-width="2"/>
+                        <text x="375" y="190" fill="#94a3b8" font-size="10" text-anchor="end">tf (częstość termu)</text>
+                        <text x="15" y="25" fill="#94a3b8" font-size="10" transform="rotate(-90 15 25)" text-anchor="end">Waga BM25</text>
+                        <line x1="40" y1="95" x2="380" y2="95" stroke="#334155" stroke-dasharray="3"/>
+                        <text x="35" y="98" fill="#475569" font-size="9" text-anchor="end">50%</text>
+                        <path id="curve" d="M 40 170" fill="none" stroke="#38bdf8" stroke-width="3"/>
+                    </svg>
+                </div>
+            </div>
+        `;
+
+        function initBM25Widget() {
+            const k1Slider = document.getElementById('k1-slider');
+            const bSlider = document.getElementById('b-slider');
+            const lenSlider = document.getElementById('len-slider');
+
+            const k1Val = document.getElementById('k1-val');
+            const bVal = document.getElementById('b-val');
+            const lenVal = document.getElementById('len-val');
+            const curve = document.getElementById('curve');
+
+            if (!k1Slider) return;
+
+            function updateChart() {
+                const k1 = parseFloat(k1Slider.value);
+                const b = parseFloat(bSlider.value);
+                const lenRatio = parseFloat(lenSlider.value);
+
+                k1Val.textContent = k1.toFixed(2);
+                bVal.textContent = b.toFixed(2);
+                lenVal.textContent = lenRatio.toFixed(2);
+
+                const startX = 40;
+                const endX = 380;
+                const startY = 170;
+                const endY = 30;
+                const width = endX - startX;
+                const height = startY - endY;
+
+                let pathD = `M ${startX} ${startY}`;
+
+                for (let xPixel = startX; xPixel <= endX; xPixel++) {
+                    const tf = ((xPixel - startX) / width) * 10;
+                    const score = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * lenRatio));
+                    const normalizedScore = score / (k1 + 1);
+
+                    const yPixel = startY - (normalizedScore * height);
+                    pathD += ` L ${xPixel} ${yPixel}`;
+                }
+
+                curve.setAttribute('d', pathD);
+            }
+
+            k1Slider.addEventListener('input', updateChart);
+            bSlider.addEventListener('input', updateChart);
+            lenSlider.addEventListener('input', updateChart);
+
+            updateChart();
+        }
+
+        // Pobieranie i renderowanie danych
+        fetch('notatki.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Błąd podczas ładowania pliku JSON z danymi");
+                }
+                return response.json();
+            })
+            .then(data => {
+                const subject = data.big_data;
+                
+                // 1. Tytuł i podtytuł
+                document.getElementById('main-title').textContent = subject.tytul;
+                document.getElementById('main-subtitle').textContent = subject.podtytul;
+
+                const tocContainer = document.getElementById('toc-container');
+                const cardsContainer = document.getElementById('cards-container');
+
+                tocContainer.innerHTML = '';
+                cardsContainer.innerHTML = '';
+
+                // 2. Renderowanie sekcji
+                subject.sekcje.forEach(sec => {
+                    // a) Spis treści
+                    const number = sec.id.replace('sekcja', '');
+                    const titleWithoutNum = sec.tytul_karty.replace(/^\d+\.\s+/, '');
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="#${sec.id}">${number}. ${titleWithoutNum}</a>`;
+                    tocContainer.appendChild(li);
+
+                    // b) Karta pojęcia
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.id = sec.id;
+
+                    let rightColumnContent = '';
+                    if (sec.ma_widget) {
+                        rightColumnContent = widgetHTML;
+                    } else if (sec.ma_graf) {
+                        rightColumnContent = `<div class="network-container" id="network-${sec.id}"></div>`;
+                    } else if (sec.grafika) {
+                        rightColumnContent = `<div class="svg-container" id="svg-${sec.id}">Ładowanie grafiki...</div>`;
+                    } else if (sec.kod) {
+                        rightColumnContent = `<pre class="language-python"><code class="language-python">${escapeHTML(sec.kod)}</code></pre>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <h2 class="card-title">${sec.tytul_karty}</h2>
+                            <span class="badge">${sec.wyklad}</span>
+                        </div>
+                        <div class="content-grid">
+                            <div class="concept-block">
+                                <div class="explanation">
+                                    <strong>Teoria z wykładu:</strong> ${sec.teoria}
+                                </div>
+                                <div>
+                                    <div class="section-title">Zastosowanie w kodzie</div>
+                                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.35rem;">
+                                        ${sec.zastosowanie_tekst}
+                                    </p>
+                                </div>
+                            </div>
+                            <div>
+                                ${rightColumnContent}
+                            </div>
+                        </div>
+                    `;
+                    cardsContainer.appendChild(card);
+                });
+
+                // 3. Inicjalizacja widgetu
+                initBM25Widget();
+
+                // 4. Ładowanie grafik SVG
+                subject.sekcje.forEach(sec => {
+                    if (sec.grafika) {
+                        fetch(sec.grafika)
+                            .then(res => {
+                                if (!res.ok) throw new Error("Błąd ładowania SVG");
+                                return res.text();
+                            })
+                            .then(svgText => {
+                                const container = document.getElementById(`svg-${sec.id}`);
+                                if (container) {
+                                    container.innerHTML = svgText;
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                const container = document.getElementById(`svg-${sec.id}`);
+                                if (container) container.innerHTML = `<span style="color: var(--accent);">Błąd ładowania wizualizacji</span>`;
+                            });
+                    }
+                });
+
+                // 5. Inicjalizacja sieci vis.js (Spark graph)
+                const netContainer = document.getElementById('network-sekcja3');
+                if (netContainer && window.vis) {
+                    const nodes = new vis.DataSet([
+                        { id: 1, label: 'SparkSession', x: 0, y: -90 },
+                        { id: 2, label: 'Driver Node', x: -100, y: -40 },
+                        { id: 3, label: 'DAG (Obliczenia)', x: 0, y: 0 },
+                        { id: 4, label: 'Lazy Evaluation', x: 120, y: 0 },
+                        { id: 5, label: 'RDD (Kolekcje)', x: -60, y: 80 },
+                        { id: 6, label: 'DataFrame', x: 60, y: 80 },
+                        { id: 7, label: 'Worker Node', x: -140, y: 90 },
+                        { id: 8, label: 'Pamięć RAM', x: 140, y: 90 }
+                    ]);
+
+                    const edges = new vis.DataSet([
+                        { from: 1, to: 2, label: 'zarządza' },
+                        { from: 1, to: 3, label: 'tworzy' },
+                        { from: 3, to: 4, label: 'optymalizuje' },
+                        { from: 3, to: 5, label: 'transformuje' },
+                        { from: 5, to: 6, label: 'udostępnia' },
+                        { from: 2, to: 7, label: 'zleca zadania' },
+                        { from: 7, to: 8, label: 'używa cache' },
+                        { from: 5, to: 8, label: 'przechowywane w' }
+                    ]);
+
+                    const graphData = { nodes: nodes, edges: edges };
+                    const graphOptions = {
+                        physics: { enabled: false },
+                        interaction: { dragNodes: true, zoomView: true, dragView: true },
+                        nodes: {
+                            shape: 'box',
+                            margin: 8,
+                            color: {
+                                background: '#1e293b',
+                                border: '#38bdf8',
+                                highlight: {
+                                    background: '#0f172a',
+                                    border: '#38bdf8'
+                                }
+                            },
+                            font: {
+                                color: '#f8fafc',
+                                size: 11,
+                                face: 'Inter, sans-serif'
+                            },
+                            borderWidth: 1.5
+                        },
+                        edges: {
+                            arrows: { to: { enabled: true, scaleFactor: 0.6 } },
+                            color: { color: '#475569', highlight: '#38bdf8' },
+                            font: { color: '#94a3b8', size: 8, align: 'middle', face: 'Inter, sans-serif' },
+                            smooth: { enabled: true, type: 'cubicBezier', roundness: 0.3 }
+                        }
+                    };
+                    new vis.Network(netContainer, graphData, graphOptions);
+                }
+
+                // 6. Inicjalizacja kolorowania kodu
+                if (window.Prism) {
+                    Prism.highlightAll();
+                }
+            })
+            .catch(error => {
+                document.getElementById('main-title').textContent = "Błąd ładowania danych";
+                document.getElementById('main-subtitle').textContent = error.message;
+                console.error(error);
+            });
+
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

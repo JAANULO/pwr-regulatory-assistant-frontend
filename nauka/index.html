@@ -3,347 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interaktywna Ściąga: AI w Inżynierii Danych</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>
-        mermaid.initialize({
-            startOnLoad: true,
-            theme: 'dark',
-            fontFamily: 'Inter'
-        });
-    </script>
+    <title>Notatki Akademickie: PWr Regulatory Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #0f172a;
             --text-color: #f8fafc;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --accent-primary: #38bdf8;
-            --accent-secondary: #818cf8;
-            --highlight: #10b981;
-            --code-bg: #1e293b;
-            --code-text: #a5b4fc;
+            --text-muted: #94a3b8;
+            --card-bg: rgba(30, 41, 59, 0.4);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-bd: #38bdf8;
+            --accent-pnod: #a855f7;
+            --accent-bd-glow: rgba(56, 189, 248, 0.15);
+            --accent-pnod-glow: rgba(168, 85, 247, 0.15);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0f172a;
+            background-color: var(--bg-color);
             background-image: 
-                radial-gradient(at 0% 0%, rgba(30, 27, 75, 1) 0, transparent 50%), 
-                radial-gradient(at 100% 100%, rgba(12, 74, 110, 0.8) 0, transparent 50%);
+                radial-gradient(at 10% 15%, rgba(17, 24, 39, 1) 0, transparent 60%),
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.1) 0, transparent 40%);
             color: var(--text-color);
-            line-height: 1.6;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             padding: 2rem;
-            background-attachment: fixed;
+            overflow-x: hidden;
         }
 
         header {
             text-align: center;
-            margin-bottom: 3rem;
-            animation: fadeInDown 1s ease-out;
+            max-width: 700px;
+            margin-bottom: 4rem;
+            animation: fadeInDown 0.8s ease-out;
         }
 
         h1 {
             font-family: 'Outfit', sans-serif;
             font-size: 3rem;
-            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #f8fafc 30%, #cbd5e1 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
         }
 
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 2.5rem;
+        header p {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            line-height: 1.6;
         }
 
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 2rem;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            border-color: rgba(56, 189, 248, 0.4);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--card-border);
-            padding-bottom: 1rem;
-        }
-
-        .card-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.8rem;
-        }
-
-        .badge {
-            background: rgba(56, 189, 248, 0.15);
-            color: var(--accent-primary);
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-
-        .content-grid {
+        .portal-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
+            gap: 2.5rem;
+            max-width: 960px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
         }
 
         @media (max-width: 768px) {
-            .content-grid { grid-template-columns: 1fr; }
+            .portal-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
         }
 
-        .section-title {
-            color: var(--accent-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 0.8rem;
+        .portal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+        }
+
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .portal-card.big-data {
+            --accent: var(--accent-bd);
+            --glow: var(--accent-bd-glow);
+        }
+
+        .portal-card.pnod {
+            --accent: var(--accent-pnod);
+            --glow: var(--accent-pnod-glow);
+        }
+
+        .portal-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 20px 40px -15px rgba(0, 0, 0, 0.5),
+                0 0 40px -10px var(--glow);
+        }
+
+        .portal-card:hover .arrow {
+            transform: translateX(6px);
+            color: var(--accent);
+        }
+
+        .card-header-badge {
+            align-self: flex-start;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            color: var(--accent);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            margin-bottom: 2rem;
+        }
+
+        .card-body h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.85rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            transition: color 0.3s;
+        }
+
+        .portal-card:hover h2 {
+            color: var(--accent);
+        }
+
+        .card-body p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+        }
+
+        .card-footer {
             display: flex;
             align-items: center;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-color);
             gap: 0.5rem;
         }
 
-        .section-title::before { content: '⚡'; }
-
-        .explanation {
-            background: rgba(0,0,0,0.2);
-            padding: 1.2rem;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-primary);
-            margin-bottom: 1rem;
+        .arrow {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s;
+            font-size: 1.2rem;
         }
 
-        .code-block {
-            background: var(--code-bg);
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.9rem;
-            color: var(--code-text);
-            overflow-x: auto;
-            border: 1px solid rgba(255,255,255,0.05);
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .example-box {
-            background: rgba(16, 185, 129, 0.05);
-            padding: 1.2rem;
-            border-radius: 8px;
-            border: 1px dashed var(--highlight);
-            margin-top: 1rem;
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .diagram-container {
-            background: rgba(255,255,255,0.02);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
+        footer {
+            margin-top: 5rem;
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
         }
-
-        /* Formula SVG styles */
-        .math-formula {
-            display: block;
-            margin: 1rem auto;
-            max-width: 100%;
-        }
-
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Notatki Wizualne z Wykładów</h1>
-        <p style="color: #94a3b8;">Twoja osobista baza wiedzy połączona z implementacją w PWr Regulatory Assistant.</p>
+        <h1>Portfel Notatek Akademickich</h1>
+        <p>Wizualne podsumowanie pojęć wykładowych powiązane z rzeczywistą implementacją w projekcie PWr Regulatory Assistant.</p>
     </header>
 
-    <div class="container">
+    <div class="portal-grid">
+        <!-- BIG DATA CARD -->
+        <a href="big_data.html" class="portal-card big-data">
+            <div>
+                <div class="card-header-badge">Semestr IV • Big Data</div>
+                <div class="card-body">
+                    <h2>Metody i Narzędzia Big Data</h2>
+                    <p>Wczytywanie i czyszczenie PDF, selekcja cech za pomocą config.toml, przetwarzanie rozproszone w Sparku z wizualizacją grafów oraz architektura MLOps w kontenerach.</p>
+                </div>
+            </div>
+            <div class="card-footer">
+                Przejdź do notatek <span class="arrow">→</span>
+            </div>
+        </a>
 
-        <!-- CONCEPT 1 -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">1. Reprezentacja Cech (TF-IDF / BM25)</h2>
-                <span class="badge">W_14_reprezentacje_cech.pdf</span>
-            </div>
-            <div class="content-grid">
-                <div>
-                    <div class="explanation">
-                        <strong>Zasada działania:</strong> Zamiast tekstu maszyny widzą tablice liczb. Częstość występowania słowa w akapicie to <code>TF</code>. Rzadkość słowa na tle całej bazy to <code>IDF</code>. BM25 to nowsza wersja, która zapobiega zjawisku "faworyzowania nieskończenie długich tekstów".
-                    </div>
-                    <div class="example-box">
-                        <strong style="color: var(--highlight);">Przykład z Regulaminu:</strong><br>
-                        Słowo <em>"i"</em>: wysokie TF, niskie IDF (ignorujemy).<br>
-                        Słowo <em>"skreślenie"</em>: rzadkie w tekście, ale potężne znaczeniowo (Wysokie IDF).
-                    </div>
-                </div>
-                <div class="diagram-container">
-                    <div class="mermaid">
-                    graph TD
-                        A["Regulamin (Tekst)"] -->|TF-IDF| B["[0, 1.4, 0.1, 5.8, 0]"]
-                        C["Pytanie Studenta"] -->|TF-IDF| D["[0, 1.2, 0, 5.0, 0]"]
-                        B -.-> E((Porównanie))
-                        D -.-> E
-                    </div>
+        <!-- PNOD CARD -->
+        <a href="pnod.html" class="portal-card pnod">
+            <div>
+                <div class="card-header-badge">Semestr III • Podstawy nauki o danych</div>
+                <div class="card-body">
+                    <h2>Podstawy Nauki o Danych</h2>
+                    <p>Preprocessing tekstu i odległość edycyjna Levenshteina, klasyfikacja intencji zapytań, optymalizacja hiperparametrów przez Random Search oraz pętla sprzężenia zwrotnego w bazie.</p>
                 </div>
             </div>
-        </div>
-
-        <!-- CONCEPT 2 -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">2. Selekcja Cech (Tokenizacja)</h2>
-                <span class="badge">Big_Data_04_selekcja_cech.pdf</span>
+            <div class="card-footer">
+                Przejdź do notatek <span class="arrow">→</span>
             </div>
-            <div class="content-grid">
-                <div>
-                    <h3 class="section-title">Wyciszanie szumu</h3>
-                    <p style="margin-bottom: 1rem;">Odrzucanie bezużytecznych danych pozwala na poprawę szybkości i jakości modelu. Stopwords (oraz, na, pod) to szum. Z kolei terminy zdefiniowane w pliku <code>config.toml</code> to sztuczne "podbicia" ważności danych (Feature Boosting).</p>
-                    
-                    <div class="code-block">
-# Twój config z projektu (Wagi cech)
-[term_boosts]
-"ects" = 2.5
-"deficyt" = 2.0
-"komisyjny" = 2.0
-"urlop" = 1.5
-                    </div>
-                </div>
-                <div class="diagram-container">
-                    <div class="mermaid">
-                    flowchart LR
-                        A["Oceny z i na egzaminie"] --> B[Stopwords]
-                        B -- usunięcie 'z', 'i', 'na' --> C["Oceny, egzaminie"]
-                        C --> D[Stemming/Leming]
-                        D --> E["ocena, egzamin"]
-                        style B fill:#b91c1c
-                        style E fill:#059669
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CONCEPT 3 -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">3. Podobieństwo Cosinusowe</h2>
-                <span class="badge">Big_Data_03_rozklady_macierzy.pdf</span>
-            </div>
-            <div class="content-grid">
-                <div>
-                    <div class="explanation">
-                        <strong>Co to jest?</strong> Miara kąta między dwoma wektorami. Jeśli wektory się nakładają (kąt = 0°), cosinus wynosi 1 (100% podobieństwa). Używa się kąta zamiast odległości Euklidesowej, bo regulamin (dużo słów) i pytanie (mało słów) miałyby dużą odległość punktową, chociaż kąt wektora byłby taki sam.
-                    </div>
-                    <div class="example-box">
-                        <strong style="color: var(--highlight);">W projekcie:</strong> Moduł <code>Podobieństwo Cosinusowe z Bazą Wiedzy</code> operuje na macierzach NumPy generując odpowiedź z dokładnością dziesiętną procent.
-                    </div>
-                </div>
-                <div class="diagram-container" style="display:flex; justify-content:center; align-items:center; flex-direction:column;">
-                    <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Oś X i Y -->
-                        <line x1="20" y1="180" x2="180" y2="180" stroke="#94a3b8" stroke-width="2"/>
-                        <line x1="20" y1="180" x2="20" y2="20" stroke="#94a3b8" stroke-width="2"/>
-                        <!-- Wektor Dokumentu -->
-                        <line x1="20" y1="180" x2="160" y2="60" stroke="#38bdf8" stroke-width="4" marker-end="url(#arrowhead)"/>
-                        <text x="165" y="55" fill="#38bdf8" font-size="12" font-family="sans-serif">Wektor: Regulamin</text>
-                        <!-- Wektor Zapytania -->
-                        <line x1="20" y1="180" x2="100" y2="40" stroke="#818cf8" stroke-width="4" marker-end="url(#arrowhead)"/>
-                        <text x="80" y="30" fill="#818cf8" font-size="12" font-family="sans-serif">Wektor: Zapytanie</text>
-                        <!-- Łuk kąta -->
-                        <path d="M 60 145 A 50 50 0 0 0 70 120" fill="transparent" stroke="#10b981" stroke-width="3"/>
-                        <text x="80" y="140" fill="#10b981" font-size="14" font-weight="bold">θ (Kąt)</text>
-                        
-                        <defs>
-                            <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                            refX="0" refY="3.5" orient="auto">
-                            <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
-                            </marker>
-                        </defs>
-                    </svg>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 10px;">Podobieństwo = cos(θ)</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- CONCEPT 4 -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">4. Klasyfikacja</h2>
-                <span class="badge">W_11_klasyfikacja.pdf</span>
-            </div>
-            <div class="content-grid">
-                <div>
-                    <h3 class="section-title">Intent Classifier</h3>
-                    <p style="margin-bottom: 1rem;">Algorytm przewiduje (przypisuje) zdefiniowaną etykietę (kategorię) do nowych danych. W projekcie klasyfikator odczytuje zamiary (intencje) użytkownika z wektora wejściowego.</p>
-                    
-                    <div class="example-box">
-                        <strong>Input:</strong> "Ile ECTS na ocenę 3.0 z fizyki?"<br><br>
-                        <strong>Output (Klasyfikacja):</strong><br>
-                        <code>Typ:</code> ZAPYTANIE_O_PUNKTY<br>
-                        <code>Fakty:</code> "ECTS", "3.0"<br>
-                        <code>Akcja:</code> Przeszukaj ustęp o ocenianiu.
-                    </div>
-                </div>
-                <div class="diagram-container">
-                    <div class="mermaid">
-                    graph TD
-                        A(Nowe Zapytanie) --> B{Klasyfikator Modelu}
-                        B -->|Wykryto Datę| C[Terminy]
-                        B -->|Wykryto Liczby| D[Opłaty/Punkty]
-                        B -->|Prawda/Fałsz| E[Ocena Twierdzenia]
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CONCEPT 5 -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">5. Estymacja i Dobry Model</h2>
-                <span class="badge">W_13_teoria_estymacji_i_dobry_model.pdf</span>
-            </div>
-            <div class="content-grid">
-                <div style="grid-column: span 2;">
-                    <div class="explanation" style="display: flex; gap: 2rem; align-items: center;">
-                        <div style="flex: 1;">
-                            <strong>Metoda: Random Search (Optymalizacja Hiperparametrów)</strong><br>
-                            Uczenie maszynowe polega m.in. na znajdowaniu optymalnych punktów. Skrypt w Twoim projekcie losuje hiperparametry i testuje model przeciwko walidacyjnemu zestawowi zapytań dopóki nie znajdzie konfiguracji o najwyższej celności (Accuracy).
-                        </div>
-                        <div class="code-block" style="flex: 1;">
-# Pseudokod z symulacja.py
-best_accuracy = 0.0
-
-for i in range(100):
-    k1 = random.uniform(1.0, 2.0)
-    b = random.uniform(0.5, 0.9)
-    
-    accuracy = evaluate_test_set(k1, b)
-    if accuracy > best_accuracy:
-        best_accuracy = accuracy
-        save_model(k1, b) # Dobry model!
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        </a>
     </div>
+
+    <footer>
+        PWr Regulatory Assistant Frontend
+    </footer>
+
 </body>
 </html>

@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 260" width="100%" height="100%">
+  <defs>
+    <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glow-emerald" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <style>
+    .svg-font {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .box {
+      fill: rgba(30, 41, 59, 0.45);
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 1.5px;
+      rx: 12px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .box:hover {
+      stroke: #10b981;
+      fill: rgba(16, 185, 129, 0.05);
+      filter: url(#glow-emerald);
+    }
+    .node-title {
+      font-weight: 600;
+      fill: #f1f5f9;
+      font-size: 11px;
+    }
+    .node-desc {
+      fill: #94a3b8;
+      font-size: 9px;
+    }
+    .arrow {
+      stroke: #475569;
+      stroke-width: 1.5;
+      fill: none;
+      stroke-dasharray: 4 3;
+      transition: all 0.3s;
+    }
+    .arrow-flow {
+      stroke: #10b981;
+      stroke-dasharray: none;
+      stroke-width: 2;
+    }
+    .badge {
+      font-weight: 700;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      fill: #10b981;
+    }
+    .icon {
+      fill: #10b981;
+    }
+  </style>
+
+  <g class="svg-font">
+    <!-- TŁO DLA PODGLĄDU -->
+    <rect width="600" height="260" fill="#0f172a" rx="20" />
+
+    <!-- NAGŁÓWEK PĘTLI -->
+    <g transform="translate(30, 30)">
+      <rect x="0" y="0" width="100" height="18" rx="9" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.2)" />
+      <text class="badge" x="50" y="12" text-anchor="middle">Feedback Loop</text>
+    </g>
+
+    <!-- NODE 1: STUDENT / INTERFEJS (OCENA) -->
+    <g transform="translate(30, 75)">
+      <rect class="box" width="110" height="120" />
+      <text class="node-title" x="15" y="30">1. Student (UI)</text>
+      <!-- Kciuk w górę / dół -->
+      <path d="M25,60 L30,60 L30,55 C30,50 35,45 40,45 L42,45 C43,45 44,46 44,47 L44,55 L52,55 C54,55 55,57 55,59 L51,80 C51,81 50,82 49,82 L25,82 Z" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <text class="node-desc" x="15" y="105">Klika kciuk w górę</text>
+      <text class="node-desc" x="15" y="115">lub dół dla odp.</text>
+    </g>
+
+    <!-- STRZAŁKA 1 -> 2 -->
+    <path class="arrow arrow-flow" d="M 140,135 L 170,135" />
+
+    <!-- NODE 2: SQLITE BAZA DANYCH -->
+    <g transform="translate(170, 75)">
+      <rect class="box" width="110" height="120" />
+      <text class="node-title" x="15" y="30">2. Baza SQLite</text>
+      <!-- Walec bazy danych -->
+      <ellipse cx="55" cy="55" rx="15" ry="6" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <path d="M40,55 L40,75 C40,78 50,81 55,81 C60,81 70,78 70,75 L70,55" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <path d="M40,65 C40,68 50,71 55,71 C60,71 70,68 70,65" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <text class="node-desc" x="15" y="105">Zapis oceny i id</text>
+      <text class="node-desc" x="15" y="115">paragrafu.</text>
+    </g>
+
+    <!-- STRZAŁKA 2 -> 3 -->
+    <path class="arrow arrow-flow" d="M 280,135 L 310,135" />
+
+    <!-- NODE 3: PARSER core/bd.py -->
+    <g transform="translate(310, 75)">
+      <rect class="box" width="110" height="120" />
+      <text class="node-title" x="15" y="30">3. Kod bd.py</text>
+      <!-- Koła zębate / Kółko z zębami -->
+      <circle cx="55" cy="60" r="12" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <path d="M55,44 L55,48 M55,72 L55,76 M39,60 L43,60 M67,60 L71,60" stroke="#10b981" stroke-width="1.5" />
+      <text class="node-desc" x="15" y="105">Wyznaczenie wagi</text>
+      <text class="node-desc" x="15" y="115">rozdziału zbiorczo.</text>
+    </g>
+
+    <!-- STRZAŁKA 3 -> 4 -->
+    <path class="arrow arrow-flow" d="M 420,135 L 450,135" />
+
+    <!-- NODE 4: WYSZUKIWARKA (BM25) -->
+    <g transform="translate(450, 75)">
+      <rect class="box" width="110" height="120" />
+      <text class="node-title" x="15" y="30">4. BM25 Core</text>
+      <!-- Lupa -->
+      <circle cx="50" cy="55" r="10" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <line x1="57" y1="62" x2="68" y2="73" stroke="#10b981" stroke-width="1.5" />
+      <text class="node-desc" x="15" y="105">Mnożenie wagi</text>
+      <text class="node-desc" x="15" y="115">i zmiana rankingu.</text>
+    </g>
+
+    <!-- STRZAŁKA ZWROTNA 4 -> 1 -->
+    <path class="arrow" d="M 505,75 L 505,50 L 85,50 L 85,75" />
+    <text class="node-desc" x="220" y="44" fill="#64748b">Lepsze dopasowanie przy kolejnym wyszukiwaniu</text>
+  </g>
+</svg>

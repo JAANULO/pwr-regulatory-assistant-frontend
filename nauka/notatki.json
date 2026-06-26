@@ -1,0 +1,87 @@
+{
+  "big_data": {
+    "tytul": "Metody i Narzędzia Big Data",
+    "podtytul": "Przetwarzanie rozproszone, elastyczne bazy danych JSON i potoki wdrożeniowe MLOps.",
+    "sekcje": [
+      {
+        "id": "sekcja1",
+        "tytul_karty": "1. Ekstrakcja i Preprocessing Danych (pdfplumber)",
+        "wyklad": "Big_Data_05_zrodla_danych_dla_inzyniera.pdf",
+        "teoria": "Pozyskiwanie danych to początkowy krok w potokach inżynierii danych. Wykład omawia wyodrębnianie i strukturyzowanie informacji z plików nieustrukturyzowanych (np. PDF, scraping witryn) do formatów API i baz danych. Biblioteka pdfplumber umożliwia dostęp do szczegółowych metadanych znaków, ułatwiając detekcję układu strony i usuwanie szumu.",
+        "zastosowanie_tekst": "W skrypcie parsera <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/infrastructure/pdf_parser.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">infrastructure/pdf_parser.py</a> biblioteka <code>pdfplumber</code> wczytuje regulamin strona po stronie, a następnie czyści nagłówki i pozostałości spisu treści wyrażeniem regularnym:",
+        "kod": "import pdfplumber\n\ndef wczytaj_pdf(sciezka):\n    pelny_tekst = \"\"\n    with pdfplumber.open(sciezka) as pdf:\n        for i, strona in enumerate(pdf.pages):\n            if i < 2: # Pomiń spis treści\n                continue\n            tekst = strona.extract_text()\n            if tekst:\n                pelny_tekst += tekst + \"\\n\"\n    return pelny_tekst\n\n# Czyszczenie nagłówków\ntekst = re.sub(r\"Strona \\d+ z \\d+\", \"\", tekst)"
+      },
+      {
+        "id": "sekcja2",
+        "tytul_karty": "2. Selekcja i Wzmacnianie Ważności Cech (Feature Boosting)",
+        "wyklad": "Big_Data_04_selekcja_cech.pdf",
+        "teoria": "Selekcja cech usuwa szum (cechy skorelowane lub o małej wariancji). Metody osadzone (np. Lasso z karą regularyzacji L1) automatycznie zerują wagi nieistotnych cech. W modelach wyszukiwania informacji ręczne wzmacnianie cech (Feature Boosting) pozwala na sztuczne zwiększenie istotności kluczowych pojęć w formule BM25.",
+        "zastosowanie_tekst": "W wyszukiwarce filtrowaniem szumu jest eliminacja stopwords w funkcji <code>tokenizuj()</code>. Zamiast statystycznej selekcji cech, stosujemy **Feature Boosting**. W pliku <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/data/config/config.toml\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">config.toml</a> pod kluczem <code>[term_boosts]</code> ręcznie podbijamy wagi kluczowych pojęć w obliczeniach BM25, sztucznie zwiększając ich istotność:",
+        "kod": "# data/config/config.toml\n[term_boosts]\n\"ects\" = 2.5\n\"deficyt\" = 2.0\n\"komisyjny\" = 2.0",
+        "ma_widget": true
+      },
+      {
+        "id": "sekcja3",
+        "tytul_karty": "3. Przetwarzanie w Dużej Skali (Apache Spark i Grafy)",
+        "wyklad": "Big_Data_06_Hadoop_Spark.pdf",
+        "teoria": "Apache Spark realizuje przetwarzanie danych w pamięci RAM. Wykorzystuje rozproszone kolekcje RDD (Resilient Distributed Datasets) i oblicza zadania leniwie (lazy evaluation), budując skierowany graf acykliczny obliczeń (DAG). Wyszukiwarki mogą modelować relacje między pojęciami jako graf współwystępowania słów.",
+        "zastosowanie_tekst": "W pliku <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/core/wyszukiwarka.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">core/wyszukiwarka.py</a> na podstawie sąsiedztwa tokenów generujemy grafy współwystępowania słów (funkcja <code>generuj_graf_slow</code>) oraz sieci relacji między paragrafami (<code>generuj_graf_paragrafow</code>) na podstawie ich podobieństwa cosinusowego. Poniżej przedstawiono interaktywny model grafu Sparka.",
+        "ma_graf": true
+      },
+      {
+        "id": "sekcja4",
+        "tytul_karty": "4. Modele Danych (Schema-on-Read vs Schema-on-Write)",
+        "wyklad": "Big_Data_07_megastruktury_danych.pdf",
+        "teoria": "Model dokumentowy NoSQL przechowuje dane jako JSON, stosując podejście Schema-on-Read (brak walidacji schematu przy zapisie, schemat interpretuje aplikacja kliencka przy odczycie). Bazy SQL wymagają walidacji schematu podczas zapisu (Schema-on-Write), co gwarantuje spójność referencyjną i spójność typów danych.",
+        "zastosowanie_tekst": "Regulaminy przechowujemy jako dokument JSON <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/data/kb/baza_wiedzy.json\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">baza_wiedzy.json</a> (zmienna struktura uniemożliwia sztywny schemat SQL). Schemat interpretuje wyszukiwarka przy parsowaniu (Schema-on-Read). Logi i feedback użytkowników przechowujemy w bazie relacyjnej (SQLite) za pomocą pliku <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/core/bd.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">core/bd.py</a>, wymagając spójnego schematu przy zapisie (Schema-on-Write).",
+        "grafika": "img/schema_on_read.svg"
+      },
+      {
+        "id": "sekcja5",
+        "tytul_karty": "5. Środowiska MLOps i Utrzymanie (FastAPI, Docker, Diagnostics)",
+        "wyklad": "Big_Data_08_Opsy.pdf",
+        "teoria": "Praktyki MLOps wdrażają automatyzację potoków wdrażania, konteneryzację (Docker) i ciągłe monitorowanie oraz testowanie modeli w środowiskach produkcyjnych. Elementy te zapewniają powtarzalność wyników oraz automatyczne wykrywanie błędów za pomocą testów regresyjnych i bram metryk (Accuracy Gates) w systemach CI/CD.",
+        "zastosowanie_tekst": "Wdrożony backend posiada wbudowane Diagnostics API (debugowanie w locie pod kluczem <code>/admin/debug</code>), testy automatyczne z progiem skuteczności (\"Accuracy Gate\" w <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/tests/test_diff.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">tests/test_diff.py</a> blokującym wdrożenie modeli o skuteczności poniżej limitu) oraz pliki Docker do automatycznego wdrożenia.",
+        "kod": "# tests/test_diff.py - Accuracy Gate w CI/CD\naccuracy = passed_tests / total_tests\nif accuracy < args.min_accuracy:\n    print(f\"[!] BLAD: Skutecznosc {accuracy * 100:.1f}% \"\n          f\"jest ponizej progu {args.min_accuracy * 100:.1f}%!\")\n    sys.exit(1) # Przerywa proces CI/CD"
+      }
+    ]
+  },
+  "pnod": {
+    "tytul": "Podstawy Nauki o Danych",
+    "podtytul": "Przetwarzanie tekstu, klasyfikacja, dobór hiperparametrów i pętla sprzężenia zwrotnego.",
+    "sekcje": [
+      {
+        "id": "sekcja1",
+        "tytul_karty": "1. Preprocessing Tekstu i Odległość Edycyjna (Levenshtein)",
+        "wyklad": "W_14_reprezentacje_cech.pdf",
+        "teoria": "Surowy tekst przed analizą wymaga normalizacji (czyszczenie diakrytyków, stopwords, stemming). Odległość edycyjna Levenshteina liczy minimalną liczbę operacji edycyjnych (wstawienie, usunięcie, zamiana) zamieniających jeden tekst w drugi. Znajduje zastosowanie w korekcji błędów użytkownika.",
+        "zastosowanie_tekst": "Preprocessing zapytania odbywa się w <code>tokenizuj()</code> z <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/core/wyszukiwarka.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">core/wyszukiwarka.py</a>. Wyszukiwarka koryguje literówki poprzez liczenie odległości edycyjnej (funkcja <code>levenshtein(a, b)</code>) na formach uproszczonych fonetycznych (np. rz->z, ch->h), aby uniezależnić się od błędów ortograficznych.",
+        "ma_widget": true
+      },
+      {
+        "id": "sekcja2",
+        "tytul_karty": "2. Klasyfikacja Intencji i Ocena Skuteczności",
+        "wyklad": "W_11_klasyfikacja.pdf",
+        "teoria": "Klasyfikacja przypisuje dane do etykiet. Model ewaluuje się metrykami takimi jak precyzja (Precision), pełność (Recall), F1-score i dokładność (Accuracy). Klasyfikacja regułowa oparta na wzorcach tekstowych oferuje pełną przewidywalność zachowania i zerowy koszt obliczeniowy w porównaniu z klasyfikatorami ML.",
+        "zastosowanie_tekst": "Klasyfikator intencji <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/core/intencje.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">core/intencje.py</a> przypisuje intencje zapytań (LICZBA, TERMIN, TAK_NIE) za pomocą dopasowań do wzorców w <code>intencje.toml</code>. Zamiast uczenia maszynowego użyto sztywnego dopasowania regułowego dla lepszej precyzji i łatwiejszego debugowania. Skuteczność systemu na zbiorze testowym mierzy metryka **Accuracy**.",
+        "kod": "# Wyciąg z intencje.py\ndef wykryj_intencje(pytanie: str) -> str:\n    p = pytanie.lower()\n    # Usunięcie polskich znaków diakrytycznych\n    p = usun_ogonki(p)\n    \n    intencje = pobierz_konfiguracje_intencji()\n    for typ, wzorce in intencje:\n        if any(w in p for w in wzorce):\n            return typ\n    return \"OGOLNE\""
+      },
+      {
+        "id": "sekcja3",
+        "tytul_karty": "3. Dobór Hiperparametrów (Random Search)",
+        "wyklad": "W_13_teoria_estymacji_i_dobry_model.pdf",
+        "teoria": "Wybór najlepszej struktury modelu (Model Selection) zapobiega niedouczeniu i przeuczeniu. Hiperparametry dobiera się przeszukując przestrzeń konfiguracji (np. za pomocą metody siatki - Grid Search lub losowo - Random Search) i walidując je na wydzielonym zbiorze danych testowych.",
+        "zastosowanie_tekst": "Moduł optymalizatora <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/scripts/symulacja.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">scripts/symulacja.py</a> w pętli losuje parametry BM25 ($k_1$, $b$) oraz wagi rozdziałów (Random Search), testując ich celność (Accuracy) na bazie 170 pytań, po czym zapisuje optymalną konfigurację.",
+        "kod": "# Wyciąg z scripts/symulacja.py\nfor i in range(max_combos):\n    # Losowanie parametrów\n    k1 = random.uniform(0.5, 2.0)\n    b = random.uniform(0.3, 0.9)\n    \n    # Ocena na zbiorze walidacyjnym\n    metrics = evaluate(k1, b)\n    acc = metrics[\"accuracy\"]\n    if acc > best_accuracy:\n        best_accuracy = acc\n        save_optimal_config(k1, b)"
+      },
+      {
+        "id": "sekcja4",
+        "tytul_karty": "4. Uczenie ze Sprzężeniem Zwrotnym (Feedback Loop)",
+        "wyklad": "W_13_teoria_estymacji_i_dobry_model.pdf",
+        "teoria": "Ulepszanie modeli w potokach produkcyjnych odbywa się za pomocą pętli sprzężenia zwrotnego (Feedback Loops), które zbierają oceny nowych obserwacji od ludzi. Dane te są następnie wykorzystywane do douczania modelu lub korekty jego wag w locie (Online Learning).",
+        "zastosowanie_tekst": "Ocena odpowiedzi od studentów (\"kciuk w górę/dół\") trafia do bazy SQL. Funkcja <code>pobierz_wspolczynniki_zbiorczo</code> w <a href=\"https://github.com/JAANULO/pwr-regulatory-assistant/blob/main/core/bd.py\" target=\"_blank\" style=\"color: var(--accent); text-decoration: none;\">core/bd.py</a> odczytuje bilans ocen dla poszczególnych rozdziałów i dynamicznie podbija lub tłumi wagi rozdziałów w wynikach wyszukiwania w locie.",
+        "grafika": "img/feedback_loop.svg"
+      }
+    ]
+  }
+}

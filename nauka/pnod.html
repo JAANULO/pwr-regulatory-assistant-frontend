@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podstawy Nauki o Danych - Notatki</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="prism.js"></script>
+    <script src="prism-python.min.js"></script>
+    <style>
+        :root {
+            --accent: #a855f7;
+            --accent-secondary: #6366f1;
+            --accent-glow: rgba(168, 85, 247, 0.15);
+            --gradient-start: rgba(168, 85, 247, 0.12);
+            --gradient-end: rgba(99, 102, 241, 0.1);
+        }
+        .widget-inputs {
+            display: flex;
+            gap: 1rem;
+        }
+        .widget-inputs input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .widget-inputs input:focus {
+            border-color: var(--accent);
+        }
+        .widget-display {
+            overflow-x: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+        .matrix-table {
+            border-collapse: collapse;
+            margin: 0 auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+        .matrix-table td, .matrix-table th {
+            width: 32px;
+            height: 32px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+        }
+        .matrix-table th {
+            color: var(--accent);
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .matrix-table td.active {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        .matrix-table td.path {
+            background: rgba(168, 85, 247, 0.25);
+            border-color: rgba(168, 85, 247, 0.5);
+            color: #fff;
+            font-weight: bold;
+            box-shadow: inset 0 0 4px var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <nav>
+            <a href="index.html">← Powrót do menu</a>
+        </nav>
+
+        <header>
+            <h1 id="main-title">Ładowanie...</h1>
+            <p class="subtitle" id="main-subtitle"></p>
+        </header>
+
+        <div class="layout-wrapper">
+            <!-- SPIS TREŚCI (SIDEBAR) -->
+            <aside class="sidebar">
+                <h3>Spis Treści</h3>
+                <ul id="toc-container">
+                    <!-- Spis treści generowany dynamicznie -->
+                </ul>
+            </aside>
+
+            <!-- GŁÓWNA TREŚĆ -->
+            <main class="cards-list" id="cards-container">
+                <!-- Karty generowane dynamicznie -->
+            </main>
+        </div>
+    </div>
+
+    <!-- SCRIPT FOR DYNAMIC RENDERING AND LEVENSHTEIN WIDGET -->
+    <script>
+        // Szablon kodu widgetu kalkulatora Levenshteina
+        const widgetHTML = `
+            <div class="widget-box">
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Kalkulator Macierzy Levenshteina</h3>
+                <div class="widget-inputs">
+                    <input type="text" id="word-a" placeholder="Słowo A" value="ects" maxlength="10">
+                    <input type="text" id="word-b" placeholder="Słowo B" value="ecst" maxlength="10">
+                </div>
+                <div class="widget-display">
+                    <div id="matrix-container"></div>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+                    Fioletowe komórki reprezentują wyznaczoną ścieżkę powrotną (backtracking).
+                </div>
+            </div>
+        `;
+
+        function initLevenshteinWidget() {
+            const wordAInput = document.getElementById('word-a');
+            const wordBInput = document.getElementById('word-b');
+            const container = document.getElementById('matrix-container');
+
+            if (!wordAInput) return;
+
+            function calculateLevenshtein() {
+                const a = wordAInput.value.toLowerCase();
+                const b = wordBInput.value.toLowerCase();
+
+                const n = a.length;
+                const m = b.length;
+
+                const dp = [];
+                for (let i = 0; i <= n; i++) {
+                    dp[i] = [];
+                    for (let j = 0; j <= m; j++) {
+                        if (i === 0) dp[i][j] = j;
+                        else if (j === 0) dp[i][j] = i;
+                        else dp[i][j] = 0;
+                    }
+                }
+
+                for (let i = 1; i <= n; i++) {
+                    for (let j = 1; j <= m; j++) {
+                        const cost = a[i-1] === b[j-1] ? 0 : 1;
+                        dp[i][j] = Math.min(
+                            dp[i-1][j] + 1,
+                            dp[i][j-1] + 1,
+                            dp[i-1][j-1] + cost
+                        );
+                    }
+                }
+
+                const path = new Set();
+                let currI = n;
+                let currJ = m;
+                path.add(`${currI},${currJ}`);
+
+                while (currI > 0 || currJ > 0) {
+                    if (currI === 0) {
+                        currJ--;
+                    } else if (currJ === 0) {
+                        currI--;
+                    } else {
+                        const cost = a[currI-1] === b[currJ-1] ? 0 : 1;
+                        const val = dp[currI][currJ];
+                        
+                        const fromDiag = dp[currI-1][currJ-1] + cost;
+                        const fromUp = dp[currI-1][currJ] + 1;
+
+                        if (val === fromDiag) {
+                            currI--;
+                            currJ--;
+                        } else if (val === fromUp) {
+                            currI--;
+                        } else {
+                            currJ--;
+                        }
+                    }
+                    path.add(`${currI},${currJ}`);
+                }
+
+                let html = '<table class="matrix-table">';
+                html += '<tr><th></th><th>ε</th>';
+                for (let j = 0; j < m; j++) {
+                    html += `<th>${b[j]}</th>`;
+                }
+                html += '</tr>';
+
+                for (let i = 0; i <= n; i++) {
+                    const charA = i === 0 ? 'ε' : a[i-1];
+                    html += `<tr><th>${charA}</th>`;
+                    for (let j = 0; j <= m; j++) {
+                        const isPath = path.has(`${i},${j}`);
+                        const cellClass = isPath ? 'class="path"' : 'class="active"';
+                        html += `<td ${cellClass}>${dp[i][j]}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</table>';
+
+                container.innerHTML = html;
+            }
+
+            wordAInput.addEventListener('input', calculateLevenshtein);
+            wordBInput.addEventListener('input', calculateLevenshtein);
+
+            calculateLevenshtein();
+        }
+
+        // Pobieranie i renderowanie danych
+        fetch('notatki.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Błąd podczas ładowania pliku JSON z danymi");
+                }
+                return response.json();
+            })
+            .then(data => {
+                const subject = data.pnod;
+                
+                // 1. Tytuł i podtytuł
+                document.getElementById('main-title').textContent = subject.tytul;
+                document.getElementById('main-subtitle').textContent = subject.podtytul;
+
+                const tocContainer = document.getElementById('toc-container');
+                const cardsContainer = document.getElementById('cards-container');
+
+                tocContainer.innerHTML = '';
+                cardsContainer.innerHTML = '';
+
+                // 2. Renderowanie sekcji
+                subject.sekcje.forEach(sec => {
+                    // a) Spis treści
+                    const number = sec.id.replace('sekcja', '');
+                    const titleWithoutNum = sec.tytul_karty.replace(/^\d+\.\s+/, '');
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="#${sec.id}">${number}. ${titleWithoutNum}</a>`;
+                    tocContainer.appendChild(li);
+
+                    // b) Karta pojęcia
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.id = sec.id;
+
+                    let rightColumnContent = '';
+                    if (sec.ma_widget) {
+                        rightColumnContent = widgetHTML;
+                    } else if (sec.grafika) {
+                        rightColumnContent = `<div class="svg-container" id="svg-${sec.id}">Ładowanie grafiki...</div>`;
+                    } else if (sec.kod) {
+                        rightColumnContent = `<pre class="language-python"><code class="language-python">${escapeHTML(sec.kod)}</code></pre>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <h2 class="card-title">${sec.tytul_karty}</h2>
+                            <span class="badge">${sec.wyklad}</span>
+                        </div>
+                        <div class="content-grid">
+                            <div class="concept-block">
+                                <div class="explanation">
+                                    <strong>Teoria z wykładu:</strong> ${sec.teoria}
+                                </div>
+                                <div>
+                                    <div class="section-title">Zastosowanie w kodzie</div>
+                                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.35rem;">
+                                        ${sec.zastosowanie_tekst}
+                                    </p>
+                                </div>
+                            </div>
+                            <div>
+                                ${rightColumnContent}
+                            </div>
+                        </div>
+                    `;
+                    cardsContainer.appendChild(card);
+                });
+
+                // 3. Inicjalizacja widgetu
+                initLevenshteinWidget();
+
+                // 4. Ładowanie grafik SVG
+                subject.sekcje.forEach(sec => {
+                    if (sec.grafika) {
+                        fetch(sec.grafika)
+                            .then(res => {
+                                if (!res.ok) throw new Error("Błąd ładowania SVG");
+                                return res.text();
+                            })
+                            .then(svgText => {
+                                const container = document.getElementById(`svg-${sec.id}`);
+                                if (container) {
+                                    container.innerHTML = svgText;
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                const container = document.getElementById(`svg-${sec.id}`);
+                                if (container) container.innerHTML = `<span style="color: var(--accent);">Błąd ładowania wizualizacji</span>`;
+                            });
+                    }
+                });
+
+                // 5. Inicjalizacja kolorowania kodu
+                if (window.Prism) {
+                    Prism.highlightAll();
+                }
+            })
+            .catch(error => {
+                document.getElementById('main-title').textContent = "Błąd ładowania danych";
+                document.getElementById('main-subtitle').textContent = error.message;
+                console.error(error);
+            });
+
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
